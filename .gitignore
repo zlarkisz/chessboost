@@ -1,0 +1,11 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# Claude Code — особисті налаштування
+.claude/settings.local.json
+
+# misc
+node_modules/
+.DS_Store
