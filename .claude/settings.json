@@ -15,6 +15,12 @@
       "Bash(git push --force *)"
     ]
   },
+  "sandbox": {
+     "enabled": true,
+    "filesystem": {
+      "denyRead": ["~/.ssh", "./.env"]
+    }
+  },
   "env": {
     "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50"
   }
