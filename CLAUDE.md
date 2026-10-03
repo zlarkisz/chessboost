@@ -20,18 +20,19 @@ architecture, conventions) once real code lands.
   - `init-firewall.sh` — default-deny egress; allows only GitHub (from
     `api.github.com/meta`), Anthropic/Claude domains, and `registry.npmjs.org`.
 - `.gitignore` — ignores `.env*` (except `.env.example`), `.claude/settings.local.json`,
-  `node_modules/`, `.DS_Store`.
+  `node_modules/`, `.DS_Store`, `.vscode/`.
 
 ## Security constraints (do not weaken without being asked)
 
 - Never read or edit `.env`, `.env.*`, `*.pem`, `*.key`, or `~/.ssh/**` — these are
-  denied in `.claude/settings.json` and the sandbox config.
+  denied by `permissions.deny` in `.claude/settings.json`. The sandbox's
+  `filesystem.denyRead` covers only `~/.ssh` and `./.env`.
 - `rm -rf` and `git push --force` are denied; don't try to work around them.
 - Inside the dev container, outbound network is restricted. If a new dependency
   source (another registry, API, CDN) is needed, add its domain to
   `ALLOWED_DOMAINS` in `.devcontainer/init-firewall.sh` rather than disabling
   the firewall.
-- Keep secrets out of the repo; document required variables in `.env.example`.
+- Keep secrets out of the repo.
 - Personal overrides go in `.claude/settings.local.json` (gitignored), not in the
   shared `settings.json`.
 
