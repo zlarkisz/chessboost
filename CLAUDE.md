@@ -29,11 +29,12 @@ depcruise, jest or docker compose directly. Copy `.env.example` → `.env` befor
 
 ## Repository layout
 
-- `apps/server/src/<bc>/` — one Nest module per bounded context (`game`, `boost`),
-  each with `domain/`, `application/`, `infrastructure/`, `presentation/` and
-  `<bc>.module.ts`.
+- `apps/server/src/<bc>/` — one folder per bounded context, each with a `README.md`.
+  Scaffolded (`game`, `boost`): `domain/`, `application/`, `infrastructure/`,
+  `presentation/` and `<bc>.module.ts`. Planned (`auth`, `player`, `match`,
+  `billing`, `notifications`): README only. Map: `docs/bc-map.md`.
 - `apps/server/src/shared/events/` — integration event contracts (`MoveMade`,
-  `BoostApplied`), the only link between BCs.
+  `BoostSquareSpawned`, `BoostApplied`), the only link between BCs.
 - `apps/server/src/infrastructure/db/` — shared Drizzle connection, `schema/`,
   `migrations/`.
 - `apps/server/.dependency-cruiser.cjs` — enforced architecture rules.
@@ -42,13 +43,15 @@ depcruise, jest or docker compose directly. Copy `.env.example` → `.env` befor
 - `.claude/settings.json` — shared Claude Code settings (permissions, sandbox, env).
 - `.devcontainer/` — dev container for running Claude Code in isolation.
 
-## Dependency rule
+## Architecture
+
+@ARCHITECTURE.md
 
 `presentation → application → domain ← infrastructure`; `domain` imports nothing
-external (no `@nestjs/*`, no npm, no `shared/`). BCs (`game`, `boost`) talk only via
+external (no `@nestjs/*`, no npm, no `shared/`). Bounded contexts talk only via
 `shared/events` — never import each other. Enforced by `make arch`.
 Details and Nest-specific prohibitions: `.claude/rules/server-architecture.md`;
-overview and diagram: `ARCHITECTURE.md`.
+per-context boundaries: `.claude/rules/<bc>.md`; BC map: `docs/bc-map.md`.
 
 ## Where guidance goes
 
