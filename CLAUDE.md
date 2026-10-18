@@ -2,31 +2,67 @@
 
 Guidance for Claude Code when working in this repository.
 
-## Project status
+## Project
 
-`chessboost` is at the scaffolding stage: there is no application code, package
-manifest, build, lint, or test setup yet. Do not assume a framework or stack —
-ask, or follow whatever the user introduces. Update this file (commands,
-architecture, conventions) once real code lands.
+`chessboost` — online chess with boosts. Every 5 moves a boost spawns on a free
+square (random type from a fixed set: invulnerability for 1 move, extra move,
+teleport); the piece that lands on it gets the effect immediately.
+See `SPEC.md` for scope and `ARCHITECTURE.md` for structure.
+
+Status: skeleton only — folders, empty Nest modules, manifests without
+dependencies. Nothing is installed yet.
+
+## Stack
+
+- pnpm workspaces monorepo (`apps/*`), Node 24.
+- `apps/web` — Nuxt 4 + Nuxt UI.
+- `apps/server` — NestJS, TypeScript, WebSocket via `@nestjs/websockets`.
+- PostgreSQL (`docker-compose.yml`) + Drizzle ORM / drizzle-kit.
+- Jest for server tests; dependency-cruiser for architecture checks.
+
+## Commands
+
+Run `pnpm install` once first. Always use make targets (see `Makefile`): `make dev`,
+`make test`, `make db-generate`, `make migrate`, `make arch` — don't call drizzle-kit,
+depcruise, jest or docker compose directly. Copy `.env.example` → `.env` before `make dev`.
 
 ## Repository layout
 
+- `apps/server/src/<bc>/` — one Nest module per bounded context (`game`, `boost`),
+  each with `domain/`, `application/`, `infrastructure/`, `presentation/` and
+  `<bc>.module.ts`.
+- `apps/server/src/shared/events/` — integration event contracts (`MoveMade`,
+  `BoostApplied`), the only link between BCs.
+- `apps/server/src/infrastructure/db/` — shared Drizzle connection, `schema/`,
+  `migrations/`.
+- `apps/server/.dependency-cruiser.cjs` — enforced architecture rules.
+- `apps/web/app/` — Nuxt app (`pages/`, `components/`, `composables/`).
+- `docs/adr/` — architecture decision records.
 - `.claude/settings.json` — shared Claude Code settings (permissions, sandbox, env).
-- `.devcontainer/` — dev container for running Claude Code in isolation:
-  - `Dockerfile` — `node:24` base, installs `@anthropic-ai/claude-code` globally
-    plus firewall tooling (`iptables`, `ipset`, `dig`, `jq`, `aggregate`).
-  - `devcontainer.json` — runs as `node`, adds `NET_ADMIN`/`NET_RAW`, persists
-    `~/.claude` in a named volume, runs the firewall script on start.
-  - `init-firewall.sh` — default-deny egress; allows only GitHub (from
-    `api.github.com/meta`), Anthropic/Claude domains, and `registry.npmjs.org`.
-- `.gitignore` — ignores `.env*` (except `.env.example`), `.claude/settings.local.json`,
-  `node_modules/`, `.DS_Store`, `.vscode/`.
+- `.devcontainer/` — dev container for running Claude Code in isolation.
+
+## Dependency rule
+
+`presentation → application → domain ← infrastructure`; `domain` imports nothing
+external (no `@nestjs/*`, no npm). BCs (`game`, `boost`) talk only via
+`shared/events` — never import each other. Enforced by `make arch`.
+Details and Nest-specific prohibitions: `.claude/rules/server-architecture.md`;
+overview and diagram: `ARCHITECTURE.md`.
+
+## Where guidance goes
+
+- Repo-wide mistake → one line here (keep this file under ~120 lines).
+- Only for some paths → `.claude/rules/<topic>.md` with `paths:`.
+- Repeated multi-step procedure → propose a skill.
+- Must never be violated → propose a check (depcruise / test / hook), not prose.
+- Architecture decision with alternatives → new ADR in `docs/adr/`.
 
 ## Security constraints (do not weaken without being asked)
 
-- Never read or edit `.env`, `.env.*`, `*.pem`, `*.key`, or `~/.ssh/**` — these are
-  denied by `permissions.deny` in `.claude/settings.json`. The sandbox's
-  `filesystem.denyRead` covers only `~/.ssh` and `./.env`.
+- Never read or edit `.env`, `.env.local`, `.env.*.local`, `.env.development`,
+  `.env.production`, `.env.staging`, `.env.test`, `*.pem`, `*.key`, or `~/.ssh/**` —
+  denied by `permissions.deny` in `.claude/settings.json` (also enforced for Bash in
+  the sandbox). `.env.example` is allowed — it holds variable names only.
 - `rm -rf` and `git push --force` are denied; don't try to work around them.
 - Inside the dev container, outbound network is restricted. If a new dependency
   source (another registry, API, CDN) is needed, add its domain to
