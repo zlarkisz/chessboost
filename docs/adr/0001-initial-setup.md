@@ -6,7 +6,7 @@
 ## Context
 
 - One developer, about 10 entities across two areas: chess rules and boosts.
-- Boost logic (spawn every 5 moves, free-square choice, effects) is the core of
+- Boost logic (spawn after every 7th half-move, free-square choice, effects) is the core of
   the product and must be tested fast, without a database or the Nest runtime.
 - Stack is fixed: NestJS + Drizzle + PostgreSQL, Nuxt on the client.
 

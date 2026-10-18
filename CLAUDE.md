@@ -4,9 +4,10 @@ Guidance for Claude Code when working in this repository.
 
 ## Project
 
-`chessboost` — online chess with boosts. Every 5 moves a boost spawns on a free
-square (random type from a fixed set: invulnerability for 1 move, extra move,
-teleport); the piece that lands on it gets the effect immediately.
+`chessboost` — online chess with boosts. After every 7th half-move (each side's move
+counts separately) a boost spawns on a free square (random type from a fixed set:
+invulnerability for 1 move, extra move, teleport); the piece that lands on it gets
+the effect immediately.
 See `SPEC.md` for scope and `ARCHITECTURE.md` for structure.
 
 Status: skeleton only — folders, empty Nest modules, manifests without
@@ -44,7 +45,7 @@ depcruise, jest or docker compose directly. Copy `.env.example` → `.env` befor
 ## Dependency rule
 
 `presentation → application → domain ← infrastructure`; `domain` imports nothing
-external (no `@nestjs/*`, no npm). BCs (`game`, `boost`) talk only via
+external (no `@nestjs/*`, no npm, no `shared/`). BCs (`game`, `boost`) talk only via
 `shared/events` — never import each other. Enforced by `make arch`.
 Details and Nest-specific prohibitions: `.claude/rules/server-architecture.md`;
 overview and diagram: `ARCHITECTURE.md`.

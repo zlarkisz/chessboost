@@ -46,22 +46,38 @@ flowchart LR
   end
 
   subgraph boost["boost BC"]
-    BA[application] --> BD[domain<br/>BoostSquare · BoostType · Effect · SpawnRule]
+    BP[presentation] --> BA[application]
+    BA --> BD[domain<br/>BoostSquare · BoostType · Effect · SpawnRule]
     BI[infrastructure] -.implements ports.-> BD
   end
 
   subgraph shared["shared/events"]
     MM([MoveMade])
+    BSS([BoostSquareSpawned])
     BAp([BoostApplied])
   end
 
   GA -- publishes --> MM
   MM -- handled by --> BA
+  BA -- publishes --> BSS
+  BSS -- handled by --> GA
   BA -- publishes --> BAp
   BAp -- handled by --> GA
-  GI & BI --> DB[(PostgreSQL)]
+  GP -- WebSocket --> CL([web clients])
+  GI & BI --> DBC[src/infrastructure/db<br/>Drizzle connection · schema · migrations]
+  DBC --> DB[(PostgreSQL)]
 ```
 
-`game` publishes `MoveMade` after every legal move; `boost` counts moves, spawns a
-boost every 5 moves, and when a piece lands on a boost square publishes
-`BoostApplied`; `game` applies the effect to the board and re-validates the position.
+`game` publishes `MoveMade` after every legal move; `boost` counts half-moves (each
+side's move separately) and after every 7th one spawns a boost on a free square and
+publishes `BoostSquareSpawned`; `game` relays it to both clients through `GameGateway`.
+When a piece lands on a boost square, `boost` publishes `BoostApplied`; `game` applies
+the effect to the board and re-validates the position.
+
+## Layout
+
+- `apps/server/src/<bc>/` — bounded contexts (`game`, `boost`), four layers each.
+- `apps/server/src/shared/events/` — integration event contracts.
+- `apps/server/src/infrastructure/db/` — shared Drizzle connection, `schema/`, `migrations/`.
+- `apps/server/test/` — server tests.
+- `apps/web/` — Nuxt 4 + Nuxt UI client; talks to the server only over WebSocket.

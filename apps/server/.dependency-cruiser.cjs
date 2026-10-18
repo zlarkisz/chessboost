@@ -48,6 +48,13 @@ module.exports = {
       to: { path: '^src/($1/(infrastructure|presentation)/|infrastructure/)' },
     },
     {
+      name: 'application-only-shared-events',
+      severity: 'error',
+      comment: 'application/ may import from shared/ only shared/events.',
+      from: { path: '^src/[^/]+/application/' },
+      to: { path: '^src/shared/', pathNot: '^src/shared/events/' },
+    },
+    {
       name: 'presentation-via-application',
       severity: 'error',
       comment: 'presentation/ goes through application/, not infrastructure/ or shared/.',
@@ -60,6 +67,13 @@ module.exports = {
       comment: 'Bounded contexts talk only via shared/events — no direct imports.',
       from: { path: '^src/([^/]+)/', pathNot: '^src/(shared|infrastructure)/' },
       to: { path: '^src/[^/]+/', pathNot: '^src/($1|shared|infrastructure)/' },
+    },
+    {
+      name: 'infrastructure-no-bc',
+      severity: 'error',
+      comment: 'src/infrastructure/ is shared plumbing and must not import any bounded context.',
+      from: { path: '^src/infrastructure/' },
+      to: { path: '^src/[^/]+/', pathNot: '^src/(infrastructure|shared)/' },
     },
     {
       name: 'shared-no-bc',
