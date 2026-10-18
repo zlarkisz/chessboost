@@ -1,0 +1,8 @@
+{
+  "name": "@chessboost/web",
+  "private": true,
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build"
+  }
+}

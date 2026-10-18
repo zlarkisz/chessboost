@@ -1,0 +1,11 @@
+{
+  "name": "@chessboost/server",
+  "private": true,
+  "scripts": {
+    "dev": "nest start --watch",
+    "test": "jest",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "arch": "depcruise src --config .dependency-cruiser.cjs"
+  }
+}
