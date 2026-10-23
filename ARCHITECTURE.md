@@ -76,8 +76,8 @@ the effect to the board and re-validates the position.
 
 ## Layout
 
-- `apps/server/src/<bc>/` — bounded contexts, a `README.md` in each; `game` and `boost`
-  scaffolded with four layers, the rest (`auth`, `player`, `match`, `billing`,
+- `apps/server/src/<bc>/` — bounded contexts, a `README.md` in each; `game`, `boost` and `match`
+  scaffolded with four layers, the rest (`auth`, `player`, `billing`,
   `notifications`) planned — see `docs/bc-map.md`.
 - `apps/server/src/shared/events/` — integration event contracts.
 - `apps/server/src/infrastructure/db/` — shared Drizzle connection, `schema/`, `migrations/`.

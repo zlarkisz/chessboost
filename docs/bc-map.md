@@ -25,7 +25,7 @@ a shared vocabulary per context → who listens to whom.
 |---|---|---|---|
 | **auth** | UserRegistered | User, Session, RefreshToken, VerificationToken | planned |
 | **player** | RatingChanged | Player, Profile, Rating, GameRecord | planned |
-| **match** | MatchCreated | MatchRequest, Queue, Opponent, TimeControl | planned |
+| **match** | MatchCreated | MatchRequest, Queue, Opponent, TimeControl | scaffolded |
 | **game** | GameStarted, MoveMade, GameEnded | Game, Board, Piece, Square, Move, Clock, EndReason | scaffolded |
 | **boost** | BoostSquareSpawned, BoostSquareExpired, BoostApplied, BoostExpired | BoostSquare, BoostType, Effect, SpawnRule, Duration | scaffolded |
 | **billing** | SubscriptionStarted, PaymentFailed | Subscription, Plan, Payment, Invoice | planned |
