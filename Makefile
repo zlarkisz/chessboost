@@ -1,4 +1,4 @@
-.PHONY: dev test db-generate migrate arch
+.PHONY: dev test db-generate migrate arch test-hooks
 
 dev:
 	docker compose up -d --wait postgres
@@ -15,3 +15,6 @@ migrate:
 
 arch:
 	pnpm --filter @chessboost/server arch
+
+test-hooks:
+	node .claude/hooks/tests/run.mjs
