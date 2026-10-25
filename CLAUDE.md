@@ -30,8 +30,8 @@ depcruise, jest or docker compose directly. Copy `.env.example` → `.env` befor
 ## Repository layout
 
 - `apps/server/src/<bc>/` — one folder per bounded context, each with a `README.md`.
-  Scaffolded (`game`, `boost`): `domain/`, `application/`, `infrastructure/`,
-  `presentation/` and `<bc>.module.ts`. Planned (`auth`, `player`, `match`,
+  Scaffolded (`game`, `boost`, `match`): `domain/`, `application/`, `infrastructure/`,
+  `presentation/` and `<bc>.module.ts`. Planned (`auth`, `player`,
   `billing`, `notifications`): README only. Map: `docs/bc-map.md`.
 - `apps/server/src/shared/events/` — integration event contracts (`MoveMade`,
   `BoostSquareSpawned`, `BoostApplied`), the only link between BCs.
