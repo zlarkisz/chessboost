@@ -11,7 +11,7 @@ disable-model-invocation: true
 `$ARGUMENTS` is the name of ONE bounded context. It must match a folder name in
 `apps/server/src/` exactly.
 
-- Empty → list contexts whose `README.md` says `Status: planned` and ask which one.
+- Empty → list contexts whose `README.md` says `**Status:** planned` and ask which one.
   Do not pick one yourself.
 - Does not match a folder exactly (wrong case, singular/plural, typo) → stop and ask,
   suggesting the closest existing name. Do not correct it silently.
@@ -23,9 +23,9 @@ disable-model-invocation: true
 Check all of these before creating anything. If any fails — stop, report which one
 and why, change nothing.
 
-- `apps/server/src/<bc>/README.md` exists and contains `Status: planned`.
-  - `Status: scaffolded` → already scaffolded, report and stop.
-  - No README or no `Status:` line → state unknown, report and stop.
+- `apps/server/src/<bc>/README.md` exists and contains `**Status:** planned`.
+  - `**Status:** scaffolded` → already scaffolded, report and stop.
+  - No README or no `**Status:**` line → state unknown, report and stop.
 - Working tree is clean (`git status --porcelain` is empty). If not → ask me to
   commit or stash first.
 - Current branch is not `main`. If it is → stop and suggest `feat/scaffold-<bc>`.
@@ -68,7 +68,7 @@ Keep each edit minimal — change only the lines listed.
 
 - `apps/server/src/app.module.ts` — add the import after the existing ones and append
   `<Bc>Module` to the end of `imports`. Do not reorder existing entries.
-- `apps/server/src/<bc>/README.md` — `Status: planned` → `Status: scaffolded`; replace
+- `apps/server/src/<bc>/README.md` — `**Status:** planned` → `**Status:** scaffolded`; replace
   the `Planned — …` line with the `Layers: …` line exactly as in `game/README.md`.
 - `docs/bc-map.md` — set this context's `Status` cell to `scaffolded`.
 - `ARCHITECTURE.md` and `CLAUDE.md` — move the context from the planned list to the
