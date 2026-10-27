@@ -1,5 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "60"
+  },
   "attribution": {
     "commit": "",
     "pr": "",
@@ -31,25 +34,23 @@
     ]
   },
   "sandbox": {
-     "enabled": true,
+    "enabled": true,
     "filesystem": {
-      "denyRead": ["~/.ssh", "./.env"]
+      "denyRead": [
+        "~/.ssh",
+        "./.env"
+      ]
     }
   },
-  "env": {
-    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "60"
-  },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/domain-import-guard.mjs"
-          }
-        ]
+  "extraKnownMarketplaces": {
+    "chessboost": {
+      "source": {
+        "source": "github",
+        "repo": "zlarkisz/chessboost-team-marketplace"
       }
-    ]
+    }
+  },
+  "enabledPlugins": {
+    "chessboost-toolkit@chessboost": true
   }
 }
