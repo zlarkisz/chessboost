@@ -82,4 +82,4 @@ the effect to the board and re-validates the position.
 - `apps/server/src/shared/events/` — integration event contracts.
 - `apps/server/src/infrastructure/db/` — shared Drizzle connection, `schema/`, `migrations/`.
 - `apps/server/test/` — server tests.
-- `apps/web/` — Nuxt 4 + Nuxt UI client; talks to the server only over WebSocket.
+- `apps/web/` — Nuxt 4 + shadcn-vue client (ADR 0002); talks to the server only over WebSocket.
