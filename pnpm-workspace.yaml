@@ -1,2 +1,6 @@
 packages:
   - apps/*
+allowBuilds:
+  esbuild: true
+minimumReleaseAgeExclude:
+  - '@nuxt/cli@4.0.3'

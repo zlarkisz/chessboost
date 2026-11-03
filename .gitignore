@@ -11,3 +11,8 @@ CLAUDE.local.md
 node_modules/
 .DS_Store
 .vscode/
+
+# Nuxt build output
+.nuxt/
+.output/
+.data/
