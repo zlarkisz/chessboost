@@ -1,5 +1,11 @@
 <template>
-  <main>
-    <h1 class="text-4xl font-bold text-red-600">chessboost</h1>
+  <main class="min-h-screen bg-background p-8 text-foreground">
+    <Card class="max-w-sm">
+      <CardHeader>
+        <CardTitle>chessboost</CardTitle>
+        <CardDescription>Design system smoke test</CardDescription>
+      </CardHeader>
+      <CardContent>Tokens from tailwind.css, components from the registry.</CardContent>
+    </Card>
   </main>
 </template>
