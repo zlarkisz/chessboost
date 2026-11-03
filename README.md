@@ -31,7 +31,7 @@ see [SPEC.md](SPEC.md#open-questions).
 
 - **Monorepo:** pnpm workspaces (`apps/*`), Node 24
 - **Server:** NestJS, TypeScript, WebSocket via `@nestjs/websockets`
-- **Client:** Nuxt 4 + Nuxt UI
+- **Client:** Nuxt 4 + shadcn-vue
 - **Database:** PostgreSQL (Docker Compose) + Drizzle ORM / drizzle-kit
 - **Quality:** Jest for server tests, dependency-cruiser for architecture checks
 
@@ -87,7 +87,7 @@ chessboost/
 │   │   │   └── infrastructure/db/ # Drizzle connection, schema, migrations
 │   │   ├── test/
 │   │   └── .dependency-cruiser.cjs
-│   └── web/                       # Nuxt 4 + Nuxt UI
+│   └── web/                       # Nuxt 4 + shadcn-vue
 │       └── app/                   # pages, components, composables
 ├── docs/adr/                      # architecture decision records
 ├── .devcontainer/

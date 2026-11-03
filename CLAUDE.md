@@ -16,7 +16,7 @@ dependencies. Nothing is installed yet.
 ## Stack
 
 - pnpm workspaces monorepo (`apps/*`), Node 24.
-- `apps/web` — Nuxt 4 + Nuxt UI.
+- `apps/web` — Nuxt 4 + shadcn-vue (components copied into the app, see ADR 0002).
 - `apps/server` — NestJS, TypeScript, WebSocket via `@nestjs/websockets`.
 - PostgreSQL (`docker-compose.yml`) + Drizzle ORM / drizzle-kit.
 - Jest for server tests; dependency-cruiser for architecture checks.

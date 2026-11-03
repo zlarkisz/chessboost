@@ -17,7 +17,7 @@
 
 ## Technical decisions
 
-- pnpm monorepo: `apps/web` (Nuxt 4 + Nuxt UI), `apps/server` (NestJS + `@nestjs/websockets`).
+- pnpm monorepo: `apps/web` (Nuxt 4 + shadcn-vue), `apps/server` (NestJS + `@nestjs/websockets`).
 - Server: Feature-first by bounded context (`game`, `boost`), light Clean inside;
   BCs talk only via `shared/events` (`MoveMade`, `BoostSquareSpawned`, `BoostApplied`)
   — see ADR 0001.
