@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@lucide/vue": "^1.66.0",
+    "@vueuse/core": "^15.0.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
     "nuxt": "^4.6.4",
@@ -20,6 +21,8 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.4",
-    "tailwindcss": "^4.3.4"
+    "tailwindcss": "^4.3.4",
+    "typescript": "^6.0.3",
+    "vue-tsc": "^3.3.14"
   }
 }
