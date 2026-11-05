@@ -34,6 +34,8 @@ treat "Rejected" as already tried and declined.
 - Archivo: condensed width for clocks, normal width for the interface.
 - Action buttons visible but quiet: "Offer draw" secondary (tonal), "Resign" destructive
   (soft red); full red only in the confirmation dialog.
+- Clickable controls show the pointer cursor (Tailwind v4 dropped it for buttons; restored
+  by a base rule in `tailwind.css`).
 
 ## Rejected
 
