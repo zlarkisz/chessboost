@@ -16,3 +16,6 @@ node_modules/
 .nuxt/
 .output/
 .data/
+
+# playwright-cli session artifacts (verify-ui)
+.playwright-cli/
