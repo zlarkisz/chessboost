@@ -8,10 +8,12 @@
   can't be captured for 1 move), **extra move**, **teleport**. The piece that lands
   on the square gets the effect immediately.
 - Boost rules are unit-testable without a database or Nest runtime.
+- Registration is required before playing: sign-in via OAuth (Google, Discord, Twitch);
+  each player has a Glicko-2 rating shown to the opponent next to their nickname.
 
 ## Non-goals
 
-- Matchmaking, ratings, accounts beyond a minimal player identity.
+- Matchmaking (random opponent search).
 - AI opponent, analysis, game history UI.
 - Configurable / user-defined boost types.
 
