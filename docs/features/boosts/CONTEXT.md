@@ -32,15 +32,10 @@ that carry real content. ## Glossary is mandatory; the other two are optional.
 - spawn — the appearance of a new boost square, with a random boost type, on a random free (empty) square right after every 7th half-move. NOT applying a boost (that happens later, when a piece lands on the square).
 - teleport — a boost type: the piece that took it is moved at once to another free (empty) square, ignoring normal movement rules. NOT a regular move or castling.
 
-## Open questions
+## Invariants
 
-Temporary: once the interview moves an item to idea-brief §15 or resolves it into an Invariant, delete it here.
-
-- [half-move] Does a turn granted by extra move count toward the spawn counter?
-- [boost square] Can several boost squares exist at once, or does a new spawn replace the old one?
-- [extra move] May any piece of that side make the extra half-move, or only the piece that took the boost?
-- [extra move] What if the first half-move gives check — can the second capture the king, or must something else happen?
-- [invulnerability] Does an invulnerable king ignore check?
-- [spawn] Should a spawn avoid squares attacked by either side?
-- [teleport] Who chooses the target square — the owner or chance?
-- [teleport] Can the king be teleported, and may a piece be teleported into check or onto a square where it gives check?
+<!-- Domain rules that hold across the whole feature/codebase — phrased «X always must / can
+     never». These are rules ABOVE any single acceptance criterion, not PRD AC. -->
+- A boost can never override king-safety rules: check must always be answered, and mate is always mate.
+- If the first half-move of an extra move gives check, the second half-move is always forfeited (Marseillais chess precedent).
+- The teleport target square must always be chosen by the owner of the teleported piece, never by chance.
