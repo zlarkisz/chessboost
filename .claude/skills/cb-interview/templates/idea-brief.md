@@ -1,6 +1,6 @@
 ---
 status: Draft | Confirmed | Frozen
-owner: "<PM name>"
+owner: "<author name>"
 reviewers: []
 updated_at: "<YYYY-MM-DD>"
 feature_size: <XS|S|M|L|XL>     # set by sdlc:classify-size, not here
@@ -14,7 +14,7 @@ value_score:
 feasibility_state: proposed | confirmed
 ---
 
-<!-- Stage 01 → see SDLC/plugin/skills/interview/SKILL.md -->
+<!-- Stage 01 → see .claude/skills/cb-interview/SKILL.md -->
 <!-- Why: capture the idea before it's forgotten or retold incorrectly -->
 
 <!-- Anti-pattern enforcement (Claude self-check, не user-visible):
@@ -32,6 +32,11 @@ feasibility_state: proposed | confirmed
 
 ## 3. Users
 <who suffers, frequency, segments>
+
+**Rollout order** (source for Reach — count only people the author can name or reach):
+1. <first circle, e.g. friends I send a link to> — <N people>
+2. <next circle> — starts only after the §11 metric is met
+3. <later circle>
 
 ## 4. Why now
 <trigger: incident/contract/deadline>
@@ -67,14 +72,14 @@ Footnotes per row: date and search query used.
 ### Engineer
 - 3-5 bullets (concerns / value / risks — abstract, NO library or DB names)
 
-### Executive
+### Owner-investor
 - 3-5 bullets
 
 ### UX-researcher
 - 3-5 bullets
 
 ### Synthesis matrix
-|         | Engineer | Executive | UX |
+|         | Engineer | Owner-investor | UX |
 |---------|:--------:|:---------:|:--:|
 | App. A  | +        | +         | 0  |
 | App. B  | -        | +         | -  |
@@ -100,10 +105,20 @@ Footnotes per row: date and search query used.
 
 ## 11. RICE — Claude proposed
 - **Reach (R)**: <number> — rationale cites §3 Users
-- **Impact (I)**: <0.25 | 0.5 | 1 | 2 | 3> — rationale cites Executive perspective + Problem severity (§2, §8)
+- **Impact (I)**: <0.25 | 0.5 | 1 | 2 | 3> — rationale cites Owner-investor perspective + Problem severity (§2, §8)
 - **Confidence (C)**: <0.5 | 0.7 | 0.8 | 1.0> — rationale cites count of TBDs / Open questions (§15)
-- **Effort (E)**: <person-weeks> — rationale cites Effort signal from §7
+- **Effort (E)**: <person-weeks> — rationale cites Effort signal from §7; prerequisites (§15) excluded
 - **RICE = R × I × C / E = <number>**
+
+| Approach | R | I | C | E | RICE |
+|---|---|---|---|---|---|
+| A | | | | | |
+| B | | | | | |
+| C | | | | | |
+
+- **Sensitivity**: <does moving one number by one scale step flip the order? yes → RICE is not the main argument in §13>
+- **Impact vs Confidence**: <anything that only lowers risk raised C, not I — name it, or "none">
+
 - **State**: proposed | confirmed
 
 ## 12. Feasibility — Claude proposed
@@ -134,6 +149,9 @@ Rationale MUST cite:
 ## 15. Open questions
 - [ ] <question> — owner: <name>, due: <date>
 - [ ] ...
+- [ ] Prerequisites: <feature> — needs its own brief, not part of Effort — owner: <name>, due: <before implement>
+- [ ] Offline prototype before write-prd: <paper playtest | paper sketch | Wizard of Oz> — <what exactly it checks> — owner: <name>, due: <before write-prd>
+- [ ] Open rules from the glossary (not definitions): <rule question> — resolve into CONTEXT.md `## Invariants`
 
 ## Related
 - Links to CONTEXT.md, ticket, related features
