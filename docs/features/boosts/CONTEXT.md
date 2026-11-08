@@ -1,6 +1,6 @@
 ---
 status: Living
-updated_at: "2026-11-08"
+updated_at: "2026-11-09"
 ---
 
 # Domain Context — boosts
@@ -27,7 +27,7 @@ that carry real content. ## Glossary is mandatory; the other two are optional.
 - boost — a single-use effect of one type from a fixed set (invulnerability, extra move, teleport) that a piece receives by landing on a boost square. NOT the boost square (the board cell that holds it until taken).
 - boost square — an empty board square holding one boost that no piece has taken yet; the boost is consumed when a piece lands on it. NOT an ordinary square, and NOT the boost itself (the effect it grants).
 - extra move — a boost type: the side whose piece took it makes one more half-move immediately, before the opponent moves. NOT a full move (only one extra half-move).
-- half-move — one move by one side (White or Black); the unit the boost spawn counter counts. NOT a full move (a White+Black pair, as in move numbering «1. e4 e5»).
+- half-move — system-wide term, defined in the repo-root [CONTEXT.md](../../../CONTEXT.md).
 - invulnerability — a boost type: the piece that took it cannot be captured during the opponent's next half-move. NOT a protected piece in the chess sense (one that may be captured but can be recaptured).
 - spawn — the appearance of a new boost square, with a random boost type, on a random free (empty) square right after every 7th half-move. NOT applying a boost (that happens later, when a piece lands on the square).
 - teleport — a boost type: the piece that took it is moved at once to another free (empty) square, ignoring normal movement rules. NOT a regular move or castling.
