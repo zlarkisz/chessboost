@@ -4,7 +4,7 @@ Guidance for Claude Code when working in this repository.
 
 ## Project
 
-`chessboost` — online chess with boosts. After every 7th half-move (each side's move
+`chessboost` — online chess with boosts. After every 13th half-move (each side's move
 counts separately) a boost spawns on a free square (random type from a fixed set:
 invulnerability for 1 move, extra move, teleport); the piece that lands on it gets
 the effect immediately.

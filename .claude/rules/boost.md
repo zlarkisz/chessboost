@@ -4,7 +4,7 @@ paths: ["apps/server/src/boost/**"]
 
 # boost context
 
-Owns boost mechanics: spawning a boost square after every 7th half-move (each side's
+Owns boost mechanics: spawning a boost square after every 13th half-move (each side's
 move counts separately), applying its effect when a piece lands on it, expiring it.
 
 ## Boundaries

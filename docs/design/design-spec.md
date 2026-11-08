@@ -40,7 +40,7 @@ No `PRD.md` or `idea-brief.md` exists for `new-game` — this is a bounded UI it
 | Observed | `apps/web/package.json` | Deps include `reka-ui`, `@lucide/vue`, `@vueuse/core`; scripts only `dev`, `build`. No web lint/test/typecheck script; `vue-tsc` is a devDependency. |
 | Observed | `apps/web/app/lib/game-format.ts`, `app/types/game.ts` | Boost copy/icons per `BoostType` (`invulnerability`, `extra-move`, `teleport`) and tone classes — reusable for the boost info block. |
 | Observed | `.claude/rules/web-design.md` | Taste rules: graphite surfaces, calm UI, no outline-only buttons on dark, no amber accent, colours only via tokens, contrast text ≥ 4.5:1 / icons ≥ 3:1, both themes must work, propose 3–4 treatments before changing real visuals. |
-| Observed | `SPEC.md` | Boost every 7th half-move, fixed set of 3 types; "Configurable / user-defined boost types" and matchmaking are non-goals. |
+| Observed | `SPEC.md` | Boost every 13th half-move, fixed set of 3 types; "Configurable / user-defined boost types" and matchmaking are non-goals. |
 | Observed | `docs/adr/0002-shadcn-vue-for-web-ui.md` | UI components are copied into the app (owned code), not a library in `node_modules`. |
 | Confirmed | User raw request (§1) | Fields, states, layouts, Figma target, mocked creation, no new UI library. |
 | Confirmed | User answer 2026-11-05 | Success navigates to `/game/demo`; no new game route. |
@@ -72,7 +72,7 @@ No `PRD.md` or `idea-brief.md` exists for `new-game` — this is a bounded UI it
 | BR-01 | Confirmed | `/` (rendered by `apps/web/app/pages/index.vue`) shows the New game screen in place of the current placeholder. | Raw request |
 | BR-02 | Confirmed | The player chooses exactly one time control from 3+2, 5+0, 10+0 (minutes + increment seconds). No time control is preselected. | Raw request |
 | BR-03 | Confirmed | The player chooses exactly one colour from White, Black, Random. | Raw request |
-| BR-04 | Confirmed | Boost mode is shown as information, not a control: boosts are on; a boost spawns after every 7th half-move; the three boost types are listed with their existing icon and name. | User answer; `SPEC.md`; `app/lib/game-format.ts` |
+| BR-04 | Confirmed | Boost mode is shown as information, not a control: boosts are on; a boost spawns after every 13th half-move; the three boost types are listed with their existing icon and name. | User answer; `SPEC.md`; `app/lib/game-format.ts` |
 | BR-05 | Confirmed | **Start game** is disabled (not clickable, `disabled` attribute) until a time control is selected. | Raw request |
 | BR-06 | Confirmed | Pressing **Start game** enters a loading state: spinner + "Creating game…" on the button, button and all radio groups disabled, duplicate submits impossible. | Raw request |
 | BR-07 | Confirmed | On mock success the app navigates to `/game/demo`. | User answer |
@@ -135,7 +135,7 @@ No `PRD.md` or `idea-brief.md` exists for `new-game` — this is a bounded UI it
 - Card title: `New game` · description (Proposed): `Pick a clock and a side. Boosts are always on.`
 - Time control label: `Time control` · options: `3 + 2` (Blitz), `5 + 0` (Blitz), `10 + 0` (Rapid)
 - Colour label: `Colour` · options: `White`, `Black`, `Random` (default)
-- Boost info (Proposed copy): `Boosts on — a boost appears after every 7th half-move.` + items `Invulnerability`, `Extra move`, `Teleport` with their existing icons (names from `boostCopy`).
+- Boost info (Proposed copy): `Boosts on — a boost appears after every 13th half-move.` + items `Invulnerability`, `Extra move`, `Teleport` with their existing icons (names from `boostCopy`).
 - Primary button: `Start game` · loading: `Creating game…`
 - Error: `Couldn't create the game. Try again.`
 - Demo link: `Open the demo game`

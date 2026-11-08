@@ -29,7 +29,7 @@ that carry real content. ## Glossary is mandatory; the other two are optional.
 - extra move — a boost type: the side whose piece took it makes one more half-move immediately, before the opponent moves. NOT a full move (only one extra half-move).
 - half-move — system-wide term, defined in the repo-root [CONTEXT.md](../../../CONTEXT.md).
 - invulnerability — a boost type: the piece that took it cannot be captured during the opponent's next half-move. NOT a protected piece in the chess sense (one that may be captured but can be recaptured).
-- spawn — the appearance of a new boost square, with a random boost type, on a random free (empty) square right after every 7th half-move. NOT applying a boost (that happens later, when a piece lands on the square).
+- spawn — the appearance of a new boost square, with a random boost type, on a random free (empty) square right after every 13th half-move. NOT applying a boost (that happens later, when a piece lands on the square).
 - teleport — a boost type: the piece that took it is moved at once to another free (empty) square, ignoring normal movement rules. NOT a regular move or castling.
 
 ## Invariants

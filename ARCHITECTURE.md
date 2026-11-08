@@ -69,7 +69,7 @@ flowchart LR
 ```
 
 `game` publishes `MoveMade` after every legal move; `boost` counts half-moves (each
-side's move separately) and after every 7th one spawns a boost on a free square and
+side's move separately) and after every 13th one spawns a boost on a free square and
 publishes `BoostSquareSpawned`; `game` relays it to both clients through `GameGateway`.
 When a piece lands on a boost square, `boost` publishes `BoostApplied`; `game` applies
 the effect to the board and re-validates the position.

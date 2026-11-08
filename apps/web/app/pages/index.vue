@@ -78,7 +78,7 @@ const colourLabelId = useId()
 
           <div class="flex flex-col gap-2 text-sm">
             <p class="text-muted-foreground">
-              Boosts on — a boost appears after every 7th half-move.
+              Boosts on — a boost appears after every 13th half-move.
             </p>
             <ul class="flex flex-wrap gap-x-4 gap-y-2">
               <li v-for="b in boosts" :key="b.name" class="flex items-center gap-2">

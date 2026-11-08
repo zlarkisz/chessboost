@@ -1,6 +1,6 @@
 # chessboost
 
-Online chess with boosts — a random power-up spawns on a free square every 7 half-moves.
+Online chess with boosts — a random power-up spawns on a free square every 13 half-moves.
 
 ![Status](https://img.shields.io/badge/status-early%20development-orange)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
@@ -15,7 +15,7 @@ Online chess with boosts — a random power-up spawns on a free square every 7 h
 
 ## ♟️ The idea
 
-Two players play standard chess online in real time, with a clock. After every 7th
+Two players play standard chess online in real time, with a clock. After every 13th
 half-move (each side's move counts separately) a boost spawns on a random free
 square. Its type is picked at random from a fixed set, and the piece that lands on
 the square gets the effect immediately:
