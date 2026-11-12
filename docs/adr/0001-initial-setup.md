@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-10-18
+- Updated 2026-11-09: the spawn interval is now every 13th half-move (see `SPEC.md`); the decision below is unchanged.
 
 ## Context
 

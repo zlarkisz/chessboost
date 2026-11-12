@@ -10,7 +10,7 @@ a shared vocabulary per context → who listens to whom.
 3. **GameStarted** — the game began, the clock is running
 4. **MoveMade** — a player made a legal move
 5. **GameEnded** — the game finished (EndReason: Mate / Resign / Timeout / Draw)
-6. **BoostSquareSpawned** — after every 7th half-move a boost appeared on a free square
+6. **BoostSquareSpawned** — after every 13th half-move a boost appeared on a free square
    (random type from a fixed set)
 7. **BoostSquareExpired** — nobody stepped on the square in time, it disappeared
 8. **BoostApplied** — a piece landed on the square, the effect applied immediately

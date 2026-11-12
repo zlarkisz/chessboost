@@ -3,15 +3,17 @@
 ## Goals
 
 - Two players play standard chess online in real time (WebSocket), with a clock.
-- After every 7th half-move (each side's move counts separately) a boost spawns on a
+- After every 13th half-move (each side's move counts separately) a boost spawns on a
   random free square; type is random from a fixed set: **invulnerability** (piece
   can't be captured for 1 move), **extra move**, **teleport**. The piece that lands
   on the square gets the effect immediately.
 - Boost rules are unit-testable without a database or Nest runtime.
+- Registration is required before playing: sign-in via OAuth (Google, Discord, Twitch);
+  each player has a Glicko-2 rating shown to the opponent next to their nickname.
 
 ## Non-goals
 
-- Matchmaking, ratings, accounts beyond a minimal player identity.
+- Matchmaking (random opponent search).
 - AI opponent, analysis, game history UI.
 - Configurable / user-defined boost types.
 
@@ -25,7 +27,7 @@
 
 ## Acceptance criteria
 
-- After the 7th, 14th, 21st, … half-move exactly one boost appears on an empty square:
+- After the 13th, 26th, 39th, … half-move exactly one boost appears on an empty square:
   `boost` publishes `BoostSquareSpawned`, `game` relays it, and both clients see it.
 - Landing on a boost square applies its effect in the same move and emits `BoostApplied`.
 - `make test` passes with boost domain tests that use no DB; `make arch` reports 0 violations.
