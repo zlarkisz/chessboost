@@ -5,7 +5,9 @@
 
 # Claude Code — особисті налаштування
 .claude/settings.local.json
+.claude/*.local.md
 CLAUDE.local.md
+.worktrees/
 
 # misc
 node_modules/

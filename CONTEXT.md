@@ -1,6 +1,6 @@
 ---
 status: Living
-updated_at: "2026-11-09"
+updated_at: "2026-11-13"
 ---
 
 # Domain Context — chessboost
@@ -31,6 +31,7 @@ that carry real content. ## Glossary is mandatory; the other two are optional.
 - game end — the moment a game finishes, always with exactly one end reason: Mate, Resign, Timeout or Draw. NOT an aborted game (it has no result), and NOT check (the game goes on; only mate ends it).
 - half-move — one move by one side (White or Black). NOT a full move (a White+Black pair, as in move numbering «1. e4 e5»).
 - offline — a player's state of having no connection to their game. NOT resignation and NOT a game end.
+- player — a registered person taking part in one game as White or Black; the other player of that game is their opponent. NOT the account/profile (owned by the future player context) and NOT a spectator (someone who watches a game without playing in it).
 - rematch — a new game between the same two players, started right after their previous game ended. NOT «New game» (that goes back to choosing settings and an opponent).
 - rematch offer — one player's request for a rematch that waits for the opponent's acceptance. NOT a rematch itself (no new game exists until it is accepted).
 - resignation — a player's own decision to end the game as a loss for themselves; it gives the end reason Resign. NOT an aborted game (resignation always gives a result) and NOT going offline (a disconnect by itself ends nothing).
@@ -44,4 +45,5 @@ that carry real content. ## Glossary is mandatory; the other two are optional.
 - A clock running out must always end the game exactly once, with the same result for both players, even when neither player is connected.
 - When a side's clock runs out and the opponent cannot checkmate by any legal sequence of moves, the game must always end as a Draw, never as a win.
 - A side that does not make its own first half-move in time must always abort the game; an aborted game can never get a game end.
+- A side's clock can never run before that side's own first half-move; until then only the abort window runs.
 - A rematch must always be accepted by both players, keep the same time control and swap colours.
