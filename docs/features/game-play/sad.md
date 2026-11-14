@@ -25,21 +25,23 @@ target_surfaces: []  # filled in §4 — subset of: backend-service | web-fronte
 <!-- 📋 Що писати: 1 абзац intent + 3 рядки топ-3 якості + таблиця stakeholders.        -->
 <!-- 📌 Приклад: «QG-1: швидкість редагування блоку p95 ≤500 мс»                         -->
 
-**Intent.** <One paragraph from PRD §Goals — what we're building and for whom.>
+**Intent.** game-play turns chessboost from a static demo into real two-player online chess: two paired players play legal chess under a running clock; every game reaches exactly one correct game end (Mate, Resign, Timeout, Draw) or is aborted; a disconnected player returns to the same game; and the pair can go straight into a rematch. It is the foundation the boosts feature runs on. First users: the author and 1–2 friends playing 10 scripted games (PRD §1).
 
 **Top-3 quality goals (1-liners; full scenarios in §10):**
 
-1. <e.g. "Availability under partial failure of downstream module">
-2. <e.g. "Performance for EM dashboard under team-scale growth">
-3. <e.g. "Recoverability of checkpoints with <30 min RTO">
+1. **Single authoritative outcome** — every game reaches exactly one game end or abort, identical on both screens, even when one or both players are offline (PRD §2 Goal 1; AC-08, AC-10, AC-16, AC-23).
+2. **Real-time sync** — half-move delivery to the opponent ≤ 500 ms p95; clocks on both screens agree within ≤ 0.5 s (PRD §6).
+3. **Recoverability** — a reconnect or a server restart resumes the real position and clocks (shown ≤ 3 s after reopening); a clock that runs out ends the game ≤ 1 s later, also when both players are offline (PRD §6; AC-27, AC-29b).
 
 **Stakeholders.**
 
 | Role | Interest | Sign-off owner? |
 |---|---|---|
-| <e.g. IC> | <feature usage> | No |
-| <e.g. EM> | <dashboard reads> | No |
-| <e.g. Tech Lead> | <SAD approval> | Yes |
+| player | plays games; needs the same result and reason on both screens | No |
+| Gleb Bufin (author — Architect / Tech Lead) | builds the feature, approves the SAD | Yes |
+| match context | produces the pairing a game is created from | No |
+| boost context (future feature) | consumes every half-move with position + half-move number | No |
+| player context / rating (future feature) | consumes each game end exactly once | No |
 
 <!-- Decision overrides (¶4) — populated by the Step-7 critic resolution loop, empty otherwise.       -->
 <!-- Each: «Decision override: <headline> — rationale: <reason>» so downstream skills see the choice.  -->
