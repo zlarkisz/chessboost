@@ -1,6 +1,6 @@
 # Bounded Context Map
 
-Event Storming lite for chessboost: 12 key domain events → 7 bounded contexts →
+Event Storming lite for chessboost: 13 key domain events → 7 bounded contexts →
 a shared vocabulary per context → who listens to whom.
 
 ## Events
@@ -18,6 +18,9 @@ a shared vocabulary per context → who listens to whom.
 10. **RatingChanged** — a player's rating was updated after a game
 11. **SubscriptionStarted** — a player subscribed
 12. **PaymentFailed** — a subscription payment failed
+13. **GameNotStarted** — a pairing could not become a game (e.g. a player already has an
+    active game); carries `matchId` + reason
+    ([game-play ADR-0006](features/game-play/adr/0006-in-process-event-bus-published-after-commit.md))
 
 ## Contexts and vocabulary
 
@@ -26,7 +29,7 @@ a shared vocabulary per context → who listens to whom.
 | **auth** | UserRegistered | User, Session, RefreshToken, VerificationToken | planned |
 | **player** | RatingChanged | Player, Profile, Rating, GameRecord | planned |
 | **match** | MatchCreated | MatchRequest, Queue, Opponent, TimeControl | scaffolded |
-| **game** | GameStarted, MoveMade, GameEnded | Game, Board, Piece, Square, Move, Clock, EndReason | scaffolded |
+| **game** | GameStarted, MoveMade, GameEnded, GameNotStarted | Game, Board, Piece, Square, Move, Clock, EndReason, DrawOffer, RematchOffer, Presence | scaffolded |
 | **boost** | BoostSquareSpawned, BoostSquareExpired, BoostApplied, BoostExpired | BoostSquare, BoostType, Effect, SpawnRule, Duration | scaffolded |
 | **billing** | SubscriptionStarted, PaymentFailed | Subscription, Plan, Payment, Invoice | planned |
 | **notifications** | — (listens only) | Notification, Channel, Template, Recipient | planned |
@@ -36,6 +39,11 @@ a `BoostSquare` in **boost** is an object with a lifecycle that only *refers* to
 a "user" is a `User` in **auth**, a `Player` in **player**, an `Opponent` in **match**
 and a `Recipient` in **notifications**.
 
+**game** owns the rematch (offer, acceptance, creating the new game with swapped colours)
+and a player's presence in their game (online / offline) — not **match**; match pairs
+players, a rematch reuses an existing pair
+([game-play ADR-0007](features/game-play/adr/0007-game-context-owns-rematch-and-presence.md)).
+
 ## BC Map
 
 ```mermaid
@@ -43,6 +51,7 @@ flowchart LR
   auth -- UserRegistered --> player
   auth -- UserRegistered --> notifications
   match -- MatchCreated --> game
+  game -- GameNotStarted --> match
   match -- MatchCreated --> notifications
   game -- MoveMade --> boost
   boost -- BoostSquareSpawned --> game

@@ -161,40 +161,63 @@ Each tactical decision in later sections should be traceable to one of these str
 <!--           лише приклад однієї поверхні; додай/заміни під оголошене у §4. → _shared/surfaces.md -->
 <!-- 📌 Приклад: «web-app, content-api, media-worker, postgres, s3, cdn».                -->
 
-<One paragraph: layered / hexagonal / clean / event-driven. Why.>
+Light Clean Architecture inside one bounded context, following the repo convention (`docs/adr/0001-initial-setup.md`, `apps/server/.dependency-cruiser.cjs`): `presentation → application → domain ← infrastructure`, ports as abstract classes in `domain`, bindings in `game.module.ts`. The whole feature lives in the **game** context, including the rematch and in-game presence — game-play ADR-0007 ([adr/0007-game-context-owns-rematch-and-presence.md](adr/0007-game-context-owns-rematch-and-presence.md)). «One active game per player» is a database uniqueness rule shared by both game-creation paths.
 
-**Internal decomposition:**
+**Internal decomposition (server, `apps/server/src/`):**
 
 ```
-<e.g. internal/modules/goals/>
-├── domain/       <entities + sentinel errors>
-├── app/          <use cases / services>
-├── infra/        <repository + outbox impl>
-├── ports/        <HTTP handlers, DTOs, error mapping>
-└── module.go     <self-wiring>
+game/
+├── domain/          Game aggregate (position, clocks, draw/rematch offers, status, game-end precedence),
+│                    TimeControl, EndReason, repetition key; ports: ChessRules, GameRepository,
+│                    TimeSource, GameScheduler
+├── application/     use cases: CreateGameFromPairing, MakeHalfMove, Resign, OfferDraw, AnswerDraw,
+│                    CancelGame, CheckTime, OfferRematch, AnswerRematch, GetSnapshot;
+│                    GameCommandQueue (one queue per game), TimerService (re-arm on boot + 5 s sweep),
+│                    PresenceRegistry, MatchCreated handler, EventPublisher port
+├── infrastructure/  DrizzleGameRepository, ChessJsRules, SystemTimeSource, NodeTimerScheduler,
+│                    EventPublisher adapter
+├── presentation/    GameGateway (Socket.IO, rooms game:<id>, handshake identity), message DTOs
+└── game.module.ts   binds ports to implementations
+shared/events/       GameStarted, MoveMade, GameEnded, GameNotStarted, MatchCreated
+infrastructure/db/   Drizzle connection, schema/, migrations/
+```
+
+**Internal decomposition (web, `apps/web/app/`):**
+
+```
+pages/game/[id].vue        client-rendered game route (routeRules ssr: false)
+composables/useGame.ts     socket, snapshot, local countdown, commandId + ack
+components/game/*          reused: GameScreen, GameBoard, PlayerClock, GameActions;
+                           new only where nothing fits (result screen, abort countdown)
 ```
 
 **C4 Container (L2):**
 
 ```mermaid
 C4Container
-    title <system> — Containers
+    title game-play — Containers
 
-    Person(user, "<User>")
+    Person(player, "player", "White or Black, one or more browser tabs")
 
-    Container_Boundary(boundary, "<Our System>") {
-        Container(web, "<Web/API container>", "<technology>", "<purpose>")
-        Container(svc, "<Service container>", "<technology>", "<purpose>")
-        ContainerDb(db, "<DB>", "<technology>", "<purpose>")
+    System_Boundary(chessboost, "chessboost") {
+        Container(web, "Web app", "Nuxt 4, shadcn-vue, socket.io-client", "Game screen, client-rendered: board, clocks, actions, result")
+        Container(server, "NestJS server", "Node 24, NestJS 12, Socket.IO, chess.js - one process", "Validates actions, keeps clocks and timers, decides game ends, publishes integration events")
+        ContainerDb(db, "PostgreSQL 17", "Drizzle ORM", "Games and the half-move log")
     }
 
-    System_Ext(ext, "<External>", "<purpose>")
-
-    Rel(user, web, "<interaction>", "<protocol>")
-    Rel(web, svc, "<service calls>")
-    Rel(svc, db, "<reads/writes>", "<driver>")
-    Rel(svc, ext, "<emits>", "<protocol>")
+    Rel(player, web, "Plays", "HTTPS")
+    Rel(web, server, "Actions with ack, snapshots and updates", "Socket.IO over WSS")
+    Rel(server, db, "One transaction per accepted action", "SQL")
 ```
+
+**Modules inside the NestJS server** (one process — not separate containers):
+
+- **game context** (this feature) — the `GameGateway` (Socket.IO, rooms `game:<id>`), use cases, one queue per game, timers re-armed on boot, rematch and presence. Maps to the `backend-service` surface.
+- **Event bus** (`shared/events`, in-process — game-play ADR-0006) — game publishes `GameStarted`, `MoveMade`, `GameEnded`, `GameNotStarted` after commit; game consumes `MatchCreated`.
+- **match context** (built by its own feature) — publishes `MatchCreated`, from which game creates a game.
+- **Sign-in / auth context** (planned) — identifies the signed-in person; game asks it through a port at the Socket.IO handshake and then checks the person is one of the game's two players.
+
+The **Web app** maps to the `web-frontend` surface.
 
 ## 6. Runtime view
 
