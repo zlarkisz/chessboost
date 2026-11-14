@@ -375,10 +375,16 @@ One NestJS server process — exactly **one replica**, because the per-game queu
 
 | # | Title | Status | Section |
 |---|---|---|---|
-| <NNNN> | <imperative — e.g. "Use sliding window for rate limiting"> | Accepted | §<N> |
-| <NNNN> | <imperative — e.g. "Co-locate outbox worker in API process"> | Accepted | §<N> |
+| [0001](adr/0001-build-backend-service-and-web-frontend.md) | Build game-play as a backend service plus the existing web frontend | Accepted | §4 |
+| [0002](adr/0002-socket-io-for-realtime-channel.md) | Use Socket.IO as the real-time channel between server and players | Accepted | §4 |
+| [0003](adr/0003-persist-each-action-before-broadcast-with-per-game-queue.md) | Persist each action before broadcast and process one game's actions through a single queue | Accepted | §4 |
+| [0004](adr/0004-deadline-clock-with-per-game-timer-rearmed-on-boot.md) | Keep a deadline clock with one timer per game, re-armed on boot | Accepted | §4 |
+| [0005](adr/0005-chess-js-behind-chess-rules-port.md) | Use chess.js behind a ChessRules port for move legality | Accepted | §4 |
+| [0006](adr/0006-in-process-event-bus-published-after-commit.md) | Publish integration events on an in-process bus after the transaction commits | Accepted | §4 |
+| [0007](adr/0007-game-context-owns-rematch-and-presence.md) | Let the game context own the rematch and a player's presence in their game | Accepted | §5 |
+| [0008](adr/0008-cloudflare-access-identity-until-auth-feature.md) | Identify players through Cloudflare Access until the auth feature exists | Accepted | §8 |
 
-ADR files live under `docs/features/<slug>/adr/NNNN-<title>.md`.
+ADR files live under `docs/features/game-play/adr/NNNN-<title>.md`. Repo-level ADRs this SAD relies on: `docs/adr/0001-initial-setup.md` (bounded contexts + light Clean), `docs/adr/0002-shadcn-vue-for-web-ui.md` (web UI kit), `docs/adr/0003-uuid-v7-for-entity-ids.md` (ID strategy, decided during this walk). Below the ADR gate and recorded inline: client-rendered `/game/**` (§4), circle-1 hosting on the home NAS (§7).
 
 ## 10. Quality requirements
 
