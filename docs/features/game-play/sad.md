@@ -432,12 +432,28 @@ Each top-3 goal from §1 expanded into a full scenario:
 
 | Risk / debt | Severity | Mitigation | Owner |
 |---|---|---|---|
-| <e.g. Outbox lag may reach hours during downstream outage> | Medium | <Alert >10 min, on-call playbook, retry backoff> | <DevOps> |
-| <e.g. No event schema versioning in v1> | Medium | <ADR-NNNN planned for v2, graceful handling of unknown fields> | <Backend> |
-| Open architectural decision: <decision-headline> | Open question | Resolve before <stage trigger or YYYY-MM-DD>; <inline rationale from Step-7 Save-as-OQ> | <owner> |
+| Product: circle 1 does not finish the 10 scripted games, so the «≥ 9/10» gate for boosts is never measured (PRD §7) | High | Game slots agreed with the friends in advance; a tracker of scripted games (scenario, date, result, notes) | Gleb Bufin |
+| The clock model misses «≤ 0.5 s difference» or the timeout scripted game stays red | High | The clock spike runs first; on failure revisit game-play ADR-0004; the scope-cut decision is due at the end of implementation week 1 (PRD §8) | Gleb Bufin |
+| The match context is not built, so scripted games have no pairing source | High | A pairing command that publishes `MatchCreated` for two allowlisted players — a CLI inside the server container only, run by the author with access to the NAS; no network endpoint of any kind. Removed when the match feature ships | Gleb Bufin |
+| Server tooling is not installed (empty `main.ts`, no Jest config, no Drizzle); unusual pins `pnpm@12.16.1` / TypeScript ^6.0 may not install | Medium | First break-tasks task: server skeleton with `make test` and `make arch` green | Gleb Bufin |
+| Everything that must be single — queue, timers, event bus, presence — lives in one process | Medium | Scale-out triggers in §7 → revisit game-play ADR-0002 / 0003 / 0004 / 0006 | Gleb Bufin |
+| chess.js validates FEN on load and may reject boost positions (game-play ADR-0005) | Medium | Check during the boosts architecture-design; fallback: a no-validation mode or another adapter behind `ChessRules` | Gleb Bufin |
+| WebSocket connections through Cloudflare Tunnel may drop when idle | Medium | Socket.IO heartbeat keeps connections active; verify in the first scripted game | Gleb Bufin |
+| The author plays from the same LAN as the NAS, so the 150 ms round-trip latency on the author's side is only emulated | Medium | Latency-emulation proxy (§10); friends play from real home networks | Gleb Bufin |
+| No rate limit on player actions; protection rests on the Cloudflare Access allowlist (game-play ADR-0008) | Medium | A rate limit is mandatory before registration opens in the auth feature | Gleb Bufin |
+| PRD §8: do the scripted games need separate real networks and a phone? | Medium | Decide before `/sdlc:plan-tests` (PRD §8) | Gleb Bufin |
+| Home NAS outage (power, internet) | Low | Acceptable for circle 1 — downtime counts against the side to move (AC-29b); hosting is revisited before circle 2 | Gleb Bufin |
+| An integration event can be lost between commit and publish (game-play ADR-0006) | Low | Switch to a transactional outbox at the architecture-design of boosts or rating; to a broker (Kafka / RabbitMQ) when there is more than one server process or a context is extracted | Gleb Bufin |
+| The Socket.IO client buffers `emit` while disconnected (game-play ADR-0002) | Low | Actions only while connected, ack with timeout, full snapshot after reconnect | Gleb Bufin |
+| Presence is lost on restart; players look offline for a few seconds (game-play ADR-0007) | Low | Rebuilt as clients reconnect | Gleb Bufin |
+| Dependency on Cloudflare Access until the auth feature ships (game-play ADR-0008) | Low | `CurrentPerson` port — replacing the adapter is a one-class change | Gleb Bufin |
 
 **Accepted debt (acceptable in v1, plan to fix later):**
-- <e.g. Goal entity is not versioned (immutable) — OK for v1, may need audit versioning in v2>
+- No lag compensation — network delay counts against the mover (PRD §3 non-goal).
+- No rate limit on player actions (trigger: before registration opens).
+- No transactional outbox — at-most-once integration events (trigger: boosts / rating architecture-design).
+- No metrics stack — NFRs are measured from logs (§7).
+- Presence is in memory only.
 
 ## 12. Glossary
 
