@@ -47,3 +47,4 @@ that carry real content. ## Glossary is mandatory; the other two are optional.
 - A side that does not make its own first half-move in time must always abort the game; an aborted game can never get a game end.
 - A side's clock can never run before that side's own first half-move; until then only the abort window runs.
 - A rematch must always be accepted by both players, keep the same time control and swap colours.
+- A player has at most one active game at a time.
