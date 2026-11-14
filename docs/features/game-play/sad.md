@@ -84,28 +84,41 @@ target_surfaces: []  # filled in §4 — subset of: backend-service | web-fronte
 <!-- 📌 Приклад: «зовнішні — нема (свідома відмова від third-party у v1)» — це теж рішення.   -->
 <!-- Кордон довіри (trust boundary) — лінія, за якою ти не довіряєш даним без перевірки.       -->
 
-<Business context in 2-3 sentences. What the system does for whom.>
+game-play lets two paired players play one live game of chess in the browser: the server alone decides legality, time and the game end, and both screens mirror it. It starts where the match context's pairing ends and hands each half-move and each game end to the contexts that build on it (boost, player/rating). Trust boundary: everything a player's browser sends is a request to be validated — never a fact (PRD §6.1).
+
+<!-- brownfield: server side is greenfield — game/boost/match contexts are empty scaffolds; web has static game-screen components (apps/web/app/components/game/) -->
 
 **External systems (in / out):**
 
 | Actor or system | Type | Interaction |
 |---|---|---|
-| <e.g. IC> | Person | Creates goals, adds checkpoints |
-| <e.g. notification-service> | System (internal) | Receives cron registration |
-| <e.g. Identity Provider> | System (external) | Provides JWT tokens |
+| player (White / Black) | Person | Makes half-moves, resigns, offers / answers draws and rematches, reconnects — over a real-time channel from the browser |
+| Sign-in (auth context, planned feature) | System (internal, other context) | Tells game-play who the signed-in person is; game-play then checks they are one of the game's two players |
+| match context | System (internal, other context) | Produces the pairing (two players, time control, colours) a game is created from — `MatchCreated` |
+| boost context (future feature) | System (internal, other context) | Consumes `MoveMade` (position + half-move number) |
+| player context / rating (future feature) | System (internal, other context) | Consumes `GameEnded` once per game end; aborted games are not published as a game end |
 
 **C4 Context (L1):**
 
 ```mermaid
 C4Context
-    title <system> — System Context
+    title game-play — System Context
 
-    Person(user, "<User>", "<role + intent>")
-    System(system, "<Our System>", "<one-sentence description>")
-    System_Ext(ext, "<External system>", "<one-sentence description>")
+    Person(white, "player (White)", "Makes half-moves, resigns, offers draws and rematches")
+    Person(black, "player (Black)", "The opponent, same capabilities")
 
-    Rel(user, system, "<interaction>", "<protocol>")
-    Rel(system, ext, "<interaction>", "<protocol>")
+    System(gameplay, "chessboost game-play", "Server-authoritative live chess: board, clocks, game end, reconnect, rematch")
+    System_Ext(auth, "Sign-in (auth context, planned)", "Identifies the signed-in person")
+    System_Ext(match, "match context", "Pairs two players with a time control and colours")
+    System_Ext(boost, "boost context (future)", "Counts half-moves and spawns boosts")
+    System_Ext(rating, "player context / rating (future)", "Records game results for rating")
+
+    Rel(white, gameplay, "Plays the game", "real-time channel over HTTPS")
+    Rel(black, gameplay, "Plays the game", "real-time channel over HTTPS")
+    Rel(gameplay, auth, "Resolves the signed-in person", "in-process port")
+    Rel(match, gameplay, "MatchCreated", "integration event")
+    Rel(gameplay, boost, "MoveMade", "integration event")
+    Rel(gameplay, rating, "GameEnded", "integration event")
 ```
 
 ## 4. Solution strategy
