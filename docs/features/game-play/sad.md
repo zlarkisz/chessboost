@@ -465,6 +465,21 @@ Each top-3 goal from §1 expanded into a full scenario:
 
 | Term | Meaning |
 |---|---|
-| <e.g. Goal> | <quarterly intent in statement form> |
-| <e.g. KR> | <Key Result — measurable target linked to a Goal> |
-| <e.g. Checkpoint> | <bi-weekly progress update on a KR> |
+| aborted game | A game cancelled because one side did not make its own first half-move in time; no result, no end reason (CONTEXT). |
+| clock | The remaining time of each side in one game; only the side to move loses time (CONTEXT). Stored by the server as remaining times + the moment the current turn began (game-play ADR-0004). |
+| draw offer | A proposal by one player to end the game as a Draw; takes effect only if the opponent accepts (CONTEXT). |
+| game | One chess game between two players, from creation (from a pairing or an accepted rematch) until its game end or abort (CONTEXT). |
+| game end | The moment a game finishes, with exactly one end reason: Mate, Resign, Timeout or Draw (CONTEXT). |
+| half-move | One move by one side (CONTEXT). |
+| offline | A player's state of having no connection to their game (CONTEXT); shown to the opponent as the offline marker. |
+| player | A registered person taking part in one game as White or Black (CONTEXT). |
+| rematch / rematch offer | A new game between the same two players right after their game ended / the request for it awaiting acceptance (CONTEXT); owned by the game context (game-play ADR-0007). |
+| resignation | A player's own decision to end the game as a loss; end reason Resign (CONTEXT). |
+| time control | Base time per side + increment after each of that side's half-moves (CONTEXT). |
+| abort window | *(not in CONTEXT — propose via `/sdlc:fix-term`)* The time a side has to make its own first half-move before the game is aborted: 20 s for Blitz, 60 s for Rapid (AC-32). |
+| pairing | *(not in CONTEXT — propose via `/sdlc:fix-term`)* Two players matched with a time control and colours by the match context; a game is created from it (`MatchCreated`). |
+| presence | *(not in CONTEXT — propose via `/sdlc:fix-term`)* Whether a player has at least one connection with their game open; drives the online / offline marker (AC-31). |
+| deadline | Technical: the moment the side to move runs out of time (or of the abort window); derived from the clock, never sent to clients. |
+| snapshot | Technical: the full current state of a game sent to a client — position, both remaining times, side to move, waiting offers, result. |
+| commandId | Technical: a client-generated UUID on every action; a repeat returns the original outcome. |
+| safety sweep | Technical: the 5-second check for active games past their deadline — a backstop for a lost timer (game-play ADR-0004). |
