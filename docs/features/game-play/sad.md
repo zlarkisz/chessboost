@@ -54,23 +54,27 @@ target_surfaces: []  # filled in §4 — subset of: backend-service | web-fronte
 <!-- 📌 Приклад: «Postgres 18» (не «Postgres»); «дедлайн Q3 — жорсткий» (не «бажано»).    -->
 
 **Technical.**
-- <Language + version, e.g. Go 1.26>
-- <Framework + version, e.g. chi v5.1, pgx v5.7>
-- <Datastore + version, e.g. Postgres 18>
-- <Architecture convention, e.g. hexagonal per CLAUDE.md>
+- Runtime Node 24; pnpm workspaces monorepo (`apps/*`), `pnpm@12.16.1`.
+- Server: NestJS ^12.2, TypeScript ^6.0; real-time via `@nestjs/websockets` (stack fixed in `CLAUDE.md`; not installed yet).
+- Web: Nuxt ^4.6, Vue ^3.5, shadcn-vue ^2.9 (`docs/adr/0002-shadcn-vue-for-web-ui.md`), Tailwind ^4.3; game-screen components already exist in `apps/web/app/components/game/` (static demo data only).
+- Data: PostgreSQL 17 (`postgres:17-alpine`, `docker-compose.yml`) + Drizzle ORM / drizzle-kit (not installed yet). No Redis, no message broker.
+- Architecture: feature-first bounded contexts + light Clean (`docs/adr/0001-initial-setup.md`); `presentation → application → domain ← infrastructure`; contexts talk only via `shared/events`; enforced by `apps/server/.dependency-cruiser.cjs` (`make arch`). `domain` imports no npm package, so any chess library sits behind a port.
+- Tests: Jest (not installed yet; no config).
 
 **Organisational.**
-- <Effort budget, e.g. 3 person-weeks>
-- <Deadline, e.g. 2026-Q3 hard>
-- <Team composition, e.g. 1 backend + 0.5 frontend>
+- One developer (the author) working with agents.
+- No hard deadline in the PRD. Gate: ≥ 9/10 scripted games reach a correct game end before boosts reach circle 2 (PRD §7). The clock spike runs first; a scope cut is decided at the end of implementation week 1 (PRD §8).
+- Prerequisite features are not built: registration / sign-in and «how players meet» (pairing). game-play consumes their outputs through ports.
 
 **Conventions.**
-- <Link to CLAUDE.md or project conventions>
-- <Naming, ID strategy, error-handling pattern>
+- `CLAUDE.md`, `.claude/rules/server-architecture.md`, `.claude/rules/game.md`, `.claude/rules/web-design.md`.
+- Only make targets (`make dev|test|arch|db-generate|migrate`); Conventional Commits.
+- UI tokens and components from `docs/design/design-system.md`.
 
 **Regulatory / external.**
-- <e.g. GDPR — user deletion behavior per ADR-NNNN>
-- <e.g. SOC2, PCI — applicable controls>
+- No regulated data — classification «internal» (PRD §6.1).
+- Mandatory controls (PRD §6.1): per-game player authorization; time and game end decided only by the server; non-player and non-existent games look the same.
+- Security review required — first authorization boundary and first real-time channel between players.
 
 ## 3. Context and scope
 
