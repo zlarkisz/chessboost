@@ -209,6 +209,11 @@ Traceability:
 **When** the opponent accepts it
 **Then** exactly one new game starts between the same two players, with the same time control and swapped colours, and both players are taken to its board
 
+### AC-22b (US-06) — domain invariant
+**Given** a player already has an active game
+**When** a rematch they are part of is accepted, or another game would be created for them
+**Then** no new game starts and they are told they already have an active game
+
 ### AC-23 (US-06) — domain invariant (concurrent)
 **Given** a game has ended and no rematch offer is waiting
 **When** both players press Rematch at nearly the same moment, or one player presses it twice
@@ -228,6 +233,11 @@ Traceability:
 **Given** a rematch offer is waiting
 **When** the opponent declines it or chooses New game, or the offering player cancels it or moves away from the result screen by an explicit action (for example, opens New game)
 **Then** the offer disappears and the other player sees that the rematch will not happen; going offline — by either player — never withdraws the offer (see AC-24)
+
+### AC-25b (US-06) — cross-context
+**Given** a rematch offer is waiting
+**When** either player of the pair starts another game (New game or an accepted rematch with someone else)
+**Then** the offer disappears and the other player sees that the rematch will not happen
 
 ### AC-26 (US-06) — cross-context
 **Given** a game has ended
@@ -253,6 +263,11 @@ Traceability:
 **Given** a player has the same game open in two browser tabs or on two devices
 **When** they make a half-move in one tab
 **Then** the other tab shows the same position, and the half-move is made only once
+
+### AC-29b (US-07) — domain invariant
+**Given** a game is in progress
+**When** the server restarts
+**Then** the game continues from its real position; the time while the server was down counts against the side to move as ordinary time; if a clock ran out during that time, the game ends with Timeout exactly once
 
 ### AC-30 (US-08) — cross-context
 **Given** a game in progress
@@ -317,8 +332,5 @@ Traceability:
 
 ## 8. Open questions
 
-- [ ] Must a game in progress survive a server restart, and how is the time while the server was down counted? Losing a game on restart would break the invariant "a clock running out must always end the game exactly once". Interim for circle 1 only: deploys happen when no game is in progress. Must be decided before circle 2. — owner: Gleb Bufin, due: before /sdlc:architecture-design
 - [ ] If the timeout scripted game is still red after the first week of implementation, do we cut Approach A's scope? Default now: keep the full scope; the clock spike runs first. — owner: Gleb Bufin, due: end of implementation week 1
 - [ ] Do the scripted games need real separate networks and a phone (device sleep, move sound blocked by the browser)? Default now: one network, desktop browsers. — owner: Gleb Bufin, due: before /sdlc:plan-tests
-- [ ] Does a waiting rematch offer ever expire (for example, after some hours or days)? Default now: it never expires; only the explicit actions in AC-25 and AC-26 withdraw it. — owner: Gleb Bufin, due: before /sdlc:architecture-design
-- [ ] Can a player have more than one active game at a time (for example, accept a rematch while already playing another game)? Default now: not forbidden explicitly in game-play; the match context decides. — owner: Gleb Bufin, due: before /sdlc:architecture-design
