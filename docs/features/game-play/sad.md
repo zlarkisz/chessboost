@@ -231,25 +231,86 @@ The **Web app** maps to the `web-frontend` surface.
 <!--           кожним §5 AC — без обмеження. Не намагайся покрити все тут.                  -->
 <!-- 📌 Приклад: «methodist → web-app: складає чорновик → web-app → content-api: зберегти». -->
 
-**Critical flow 1: <flow name>**
+Participants are the §5 containers. Inside the NestJS server every action of one game passes through that game's queue (game-play ADR-0003). These are the seed flows; `complete-sequence-diagrams` covers every AC.
+
+**Critical flow 1: a half-move, accepted or rejected (QG-1, QG-2; AC-01, AC-02, AC-29)**
 
 ```mermaid
 sequenceDiagram
-    actor User
-    participant API
-    participant Service
-    participant DB
-    User->>API: <request>
-    API->>Service: <call>
-    Service->>DB: <write tx>
-    DB-->>Service: ok
-    Service-->>API: result
-    API-->>User: 201
+    actor W as player White
+    participant WW as Web app White
+    participant S as NestJS server
+    participant DB as PostgreSQL
+    participant WB as Web app Black
+    W->>WW: drags a piece
+    WW->>S: half-move request with commandId, only while connected
+    S->>S: enqueue in this game's queue, check turn and legality
+    alt legal and on time
+        S->>DB: one transaction - game row with version, half-move log, clocks
+        DB-->>S: committed
+        S-->>WW: ack accepted with new snapshot
+        S-->>WB: update to every tab in room game id - position, remaining times
+        S->>S: publish MoveMade after commit
+        S->>S: re-arm timer for the new side to move
+    else illegal or not White's turn
+        S-->>WW: ack rejected, position and clocks unchanged
+        WW->>W: piece returns to its square
+    end
 ```
 
-<!-- For XS/S: 1 flow above is enough. For M+: add 2-4 more (e.g. failure-mode flow, async flow). -->
+**Critical flow 2: a clock runs out while both players are offline, across a server restart (QG-1, QG-3; AC-08, AC-28, AC-29b)**
 
-**Critical flow 2: <e.g. async event propagation>** — <if applicable, otherwise N/A>.
+```mermaid
+sequenceDiagram
+    participant S as NestJS server
+    participant DB as PostgreSQL
+    actor P as player
+    participant WP as Web app
+    Note over S: restart - timers lost
+    S->>DB: on boot, load all active games
+    DB-->>S: positions, remaining times, turn start
+    S->>S: re-arm one timer per game at its deadline
+    alt deadline already passed during downtime
+        S->>S: enqueue check time now
+    else deadline in the future
+        S->>S: timer fires at the deadline and enqueues check time
+    end
+    S->>DB: transaction - compare game time with deadline, set game end Timeout or Draw by material
+    DB-->>S: committed once
+    S->>S: publish GameEnded after commit
+    Note over S,DB: safety sweep every 5 s catches any active game past its deadline
+    P->>WP: opens the game link later
+    WP->>S: connect and request snapshot
+    S-->>WP: same result and end reason
+```
+
+**Critical flow 3: reconnect after a drop right after a half-move (QG-3; AC-27, AC-27b, AC-31)**
+
+```mermaid
+sequenceDiagram
+    actor P as player
+    participant WP as Web app
+    participant S as NestJS server
+    participant DB as PostgreSQL
+    participant WO as Web app opponent
+    P->>WP: makes a half-move
+    WP->>S: half-move request with commandId
+    Note over WP,S: connection drops before the ack arrives
+    WP->>P: half-move shown as pending, no buffered resend
+    S->>S: heartbeat misses, player offline after pingInterval plus pingTimeout under 10 s
+    S-->>WO: offline marker next to the player's nickname
+    WP->>S: automatic reconnect with session identity
+    S->>S: check person is one of the two players
+    S->>DB: read committed state
+    DB-->>S: position, clocks, turn, waiting draw offer
+    S-->>WP: full snapshot
+    alt the half-move was committed before the drop
+        WP->>P: shows it as made
+    else it was never received
+        WP->>P: piece back, player moves again if time remains
+    end
+    S-->>WO: online marker within 3 s of the return
+```
 
 ## 7. Deployment view
 
