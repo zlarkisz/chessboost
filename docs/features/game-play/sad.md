@@ -58,6 +58,7 @@ target_surfaces: [backend-service, web-frontend]  # filled in §4 — subset of:
 - Server: NestJS ^12.2, TypeScript ^6.0; real-time via `@nestjs/websockets` (stack fixed in `CLAUDE.md`; not installed yet).
 - Web: Nuxt ^4.6, Vue ^3.5, shadcn-vue ^2.9 (`docs/adr/0002-shadcn-vue-for-web-ui.md`), Tailwind ^4.3; game-screen components already exist in `apps/web/app/components/game/` (static demo data only).
 - Data: PostgreSQL 17 (`postgres:17-alpine`, `docker-compose.yml`) + Drizzle ORM / drizzle-kit (not installed yet). No Redis, no message broker.
+- v1 runs exactly one server process — this follows from having no shared store (no Redis) and no broker; scale-out triggers are in §7.
 - Architecture: feature-first bounded contexts + light Clean (`docs/adr/0001-initial-setup.md`); `presentation → application → domain ← infrastructure`; contexts talk only via `shared/events`; enforced by `apps/server/.dependency-cruiser.cjs` (`make arch`). `domain` imports no npm package, so any chess library sits behind a port.
 - Tests: Jest (not installed yet; no config).
 
@@ -94,7 +95,7 @@ game-play lets two paired players play one live game of chess in the browser: th
 |---|---|---|
 | player (White / Black) | Person | Makes half-moves, resigns, offers / answers draws and rematches, reconnects — over a real-time channel from the browser |
 | Sign-in (auth context, planned feature) | System (internal, other context) | Tells game-play who the signed-in person is; game-play then checks they are one of the game's two players |
-| match context | System (internal, other context) | Produces the pairing (two players, time control, colours) a game is created from — `MatchCreated` |
+| match context | System (internal, other context) | Produces the pairing a game is created from — `MatchCreated` carries the time control, colours and, per player, `playerId` + nickname + rating (optional); game stores them as a snapshot on the game (AC-06, AC-30) |
 | boost context (future feature) | System (internal, other context) | Consumes `MoveMade` (position + half-move number) |
 | player context / rating (future feature) | System (internal, other context) | Consumes `GameEnded` once per game end; aborted games are not published as a game end |
 
@@ -141,7 +142,7 @@ C4Context
 
 **Top strategic choices (the seeds for ADRs):**
 
-1. **Socket.IO as the real-time channel** — game-play ADR-0002 ([adr/0002-socket-io-for-realtime-channel.md](adr/0002-socket-io-for-realtime-channel.md)). Rooms per game (every tab of both players), acks per action, a heartbeat tuned for the offline marker ≤ 10 s, and automatic reconnection serve QG-2 and QG-3. Actions are sent only while connected, each with an ack and a timeout; after a reconnect the client takes a full snapshot instead of relying on the client's emit buffer (AC-27b).
+1. **Socket.IO as the real-time channel** — game-play ADR-0002 ([adr/0002-socket-io-for-realtime-channel.md](adr/0002-socket-io-for-realtime-channel.md)). Rooms per game (every tab of both players), acks per action, a heartbeat tuned for the offline marker ≤ 10 s, and automatic reconnection serve QG-2 and QG-3. Actions are sent only while connected, each with an ack and a timeout; no ack before the timeout leaves the half-move pending (never resent by the client) until the full snapshot after reconnect shows whether the game accepted it — the client's emit buffer is never relied on (AC-27b).
 2. **Persist each action before broadcast, one queue per game** — game-play ADR-0003 ([adr/0003-persist-each-action-before-broadcast-with-per-game-queue.md](adr/0003-persist-each-action-before-broadcast-with-per-game-queue.md)). PostgreSQL is the source of truth: each accepted action is one transaction (game row with a version + an append-only half-move log), broadcast only after commit. Actions of one game — including timeout and abort checks — are processed strictly one at a time; the version column is a database-level backstop; a client `commandId` makes retries and second tabs idempotent. Serves QG-1 and QG-3.
 3. **Deadline clock, one timer per game, re-armed on boot** — game-play ADR-0004 ([adr/0004-deadline-clock-with-per-game-timer-rearmed-on-boot.md](adr/0004-deadline-clock-with-per-game-timer-rearmed-on-boot.md)). The server stores remaining times and the moment the current turn began (before a side's first half-move: the abort deadline). A per-game timer fires at the deadline and enqueues a time check; on boot all active games are loaded and their timers re-armed; a safety sweep every 5 s catches any overdue active game. Clients receive remaining times and count down with a monotonic timer from receipt. Serves QG-1 and QG-3; validated first by the clock spike (PRD §8).
 4. **chess.js behind a `ChessRules` port** — game-play ADR-0005 ([adr/0005-chess-js-behind-chess-rules-port.md](adr/0005-chess-js-behind-chess-rules-port.md)). Move legality comes from a pinned chess.js in `game/infrastructure`; the domain keeps game-end precedence, insufficient material per AC-18, «can this side mate by material» (AC-09), clocks and offers.
@@ -163,21 +164,28 @@ Each tactical decision in later sections should be traceable to one of these str
 
 Light Clean Architecture inside one bounded context, following the repo convention (`docs/adr/0001-initial-setup.md`, `apps/server/.dependency-cruiser.cjs`): `presentation → application → domain ← infrastructure`, ports as abstract classes in `domain`, bindings in `game.module.ts`. The whole feature lives in the **game** context, including the rematch and in-game presence — game-play ADR-0007 ([adr/0007-game-context-owns-rematch-and-presence.md](adr/0007-game-context-owns-rematch-and-presence.md)). «One active game per player» is a database uniqueness rule shared by both game-creation paths.
 
+**Override note — `EventPublisher` is a port in `application`, not `domain`.** It speaks `shared/events` types, which `domain` may not import (`.dependency-cruiser.cjs` rule `domain-only-own-domain`), while `application-only-shared-events` allows it. All other ports stay in `domain`.
+
+**Temporary pairing CLI (in `match`).** Until the match feature ships, scripted games get their pairing from a dev-only CLI `create-pairing` in `match/presentation`: it runs only inside the server container (the author, through access to the NAS), exposes no HTTP or WebSocket endpoint, takes the nicknames from the Cloudflare Access allowlist mapping, and publishes `MatchCreated` — the event belongs to match, so the code does too (`no-cross-bc` holds). It is removed when the match feature ships (§11).
+
 **Internal decomposition (server, `apps/server/src/`):**
 
 ```
 game/
 ├── domain/          Game aggregate (position, clocks, draw/rematch offers, status, game-end precedence),
 │                    TimeControl, EndReason, repetition key; ports: ChessRules, GameRepository,
-│                    TimeSource, GameScheduler
+│                    TimeSource, GameScheduler, IdGenerator
 ├── application/     use cases: CreateGameFromPairing, MakeHalfMove, Resign, OfferDraw, AnswerDraw,
 │                    CancelGame, CheckTime, OfferRematch, AnswerRematch, GetSnapshot;
 │                    GameCommandQueue (one queue per game), TimerService (re-arm on boot + 5 s sweep),
 │                    PresenceRegistry, MatchCreated handler, EventPublisher port
 ├── infrastructure/  DrizzleGameRepository, ChessJsRules, SystemTimeSource, NodeTimerScheduler,
-│                    EventPublisher adapter
+│                    UuidV7IdGenerator, EventPublisher adapter
 ├── presentation/    GameGateway (Socket.IO, rooms game:<id>, handshake identity), message DTOs
 └── game.module.ts   binds ports to implementations
+match/
+└── presentation/    TEMPORARY dev-only CLI create-pairing: publishes MatchCreated for two
+                     allowlisted players; removed when the match feature ships
 shared/events/       GameStarted, MoveMade, GameEnded, GameNotStarted, MatchCreated
 infrastructure/db/   Drizzle connection, schema/, migrations/
 ```
@@ -214,7 +222,7 @@ C4Container
 
 - **game context** (this feature) — the `GameGateway` (Socket.IO, rooms `game:<id>`), use cases, one queue per game, timers re-armed on boot, rematch and presence. Maps to the `backend-service` surface.
 - **Event bus** (`shared/events`, in-process — game-play ADR-0006) — game publishes `GameStarted`, `MoveMade`, `GameEnded`, `GameNotStarted` after commit; game consumes `MatchCreated`.
-- **match context** (built by its own feature) — publishes `MatchCreated`, from which game creates a game.
+- **match context** (built by its own feature; until then only the temporary pairing CLI) — publishes `MatchCreated` with both players' `playerId`, nickname and optional rating, from which game creates a game.
 - **Sign-in / auth context** (planned) — identifies the signed-in person; game asks it through a port at the Socket.IO handshake and then checks the person is one of the game's two players.
 
 The **Web app** maps to the `web-frontend` surface.
@@ -355,6 +363,7 @@ One NestJS server process — exactly **one replica**, because the per-game queu
 |---|---|---|
 | Authentication | `CurrentPerson` port read at the Socket.IO handshake. Circle 1: Cloudflare Access (email one-time code, 3-address allowlist); the adapter verifies the signed Access JWT (signature + audience) and maps email → player. The auth feature later replaces the adapter. Local dev: dev-only adapter. | game-play ADR-0008 ([adr/0008-cloudflare-access-identity-until-auth-feature.md](adr/0008-cloudflare-access-identity-until-auth-feature.md)) |
 | Authorization | «Is this person one of the game's two players?» checked in `application` on every action and on joining the room `game:<id>`; someone else's game and a non-existent one get the same «not found or not available» reply (AC-04). | here |
+| Privacy | The Cloudflare Access email is used only inside the `CurrentPerson` adapter to map to a player; it never enters events, snapshots or messages to clients. The opponent sees only the nickname (and rating, if any) — PRD §6.1. | game-play ADR-0006, ADR-0008 |
 | Error handling | Domain errors are typed results (`IllegalMove`, `NotYourTurn`, `GameOver`, `DrawOfferNotAllowed`, …); `presentation` maps them to an ack `{ ok: false, code: 'game.<reason>' }`; no exception ever reaches the socket. | here |
 | ID strategy | UUID v7 generated in `application` for entities; clients generate `commandId` UUIDs. | `docs/adr/0003-uuid-v7-for-entity-ids.md` |
 | Time | One `TimeSource` port. Deadlines and moments are persisted as wall-clock time (so downtime counts, AC-29b); in-process timers measure with monotonic time. | game-play ADR-0004 |
@@ -434,7 +443,7 @@ Each top-3 goal from §1 expanded into a full scenario:
 |---|---|---|---|
 | Product: circle 1 does not finish the 10 scripted games, so the «≥ 9/10» gate for boosts is never measured (PRD §7) | High | Game slots agreed with the friends in advance; a tracker of scripted games (scenario, date, result, notes) | Gleb Bufin |
 | The clock model misses «≤ 0.5 s difference» or the timeout scripted game stays red | High | The clock spike runs first; on failure revisit game-play ADR-0004; the scope-cut decision is due at the end of implementation week 1 (PRD §8) | Gleb Bufin |
-| The match context is not built, so scripted games have no pairing source | High | A pairing command that publishes `MatchCreated` for two allowlisted players — a CLI inside the server container only, run by the author with access to the NAS; no network endpoint of any kind. Removed when the match feature ships | Gleb Bufin |
+| The match context is not built, so scripted games have no pairing source | High | The temporary pairing CLI in `match/presentation` (§5) publishes `MatchCreated` for two allowlisted players — runs inside the server container only, by the author with access to the NAS; no network endpoint of any kind. Removed when the match feature ships | Gleb Bufin |
 | Server tooling is not installed (empty `main.ts`, no Jest config, no Drizzle); unusual pins `pnpm@12.16.1` / TypeScript ^6.0 may not install | Medium | First break-tasks task: server skeleton with `make test` and `make arch` green | Gleb Bufin |
 | Everything that must be single — queue, timers, event bus, presence — lives in one process | Medium | Scale-out triggers in §7 → revisit game-play ADR-0002 / 0003 / 0004 / 0006 | Gleb Bufin |
 | chess.js validates FEN on load and may reject boost positions (game-play ADR-0005) | Medium | Check during the boosts architecture-design; fallback: a no-validation mode or another adapter behind `ChessRules` | Gleb Bufin |
@@ -446,6 +455,7 @@ Each top-3 goal from §1 expanded into a full scenario:
 | An integration event can be lost between commit and publish (game-play ADR-0006) | Low | Switch to a transactional outbox at the architecture-design of boosts or rating; to a broker (Kafka / RabbitMQ) when there is more than one server process or a context is extracted | Gleb Bufin |
 | The Socket.IO client buffers `emit` while disconnected (game-play ADR-0002) | Low | Actions only while connected, ack with timeout, full snapshot after reconnect | Gleb Bufin |
 | Presence is lost on restart; players look offline for a few seconds (game-play ADR-0007) | Low | Rebuilt as clients reconnect | Gleb Bufin |
+| A rematch takes nickname and rating from the previous game, so after a rated game it shows a stale rating | Low | Revisit at the architecture-design of the rating feature | Gleb Bufin |
 | Dependency on Cloudflare Access until the auth feature ships (game-play ADR-0008) | Low | `CurrentPerson` port — replacing the adapter is a one-class change | Gleb Bufin |
 
 **Accepted debt (acceptable in v1, plan to fix later):**

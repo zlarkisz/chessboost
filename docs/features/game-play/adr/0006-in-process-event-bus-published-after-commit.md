@@ -38,6 +38,8 @@ Details fixed by this decision:
 
 - Events are published only after the game-play ADR-0003 transaction commits.
 - **(a) Handlers are isolated:** delivery is asynchronous with error capture; a consumer's failure is logged and never propagates back to the player's action.
+- The `EventPublisher` port lives in `application`, not `domain`: it speaks `shared/events` types, which `domain` may not import (`domain-only-own-domain`); this is the one exception to «ports in domain» (sad.md §5 Override note).
+- **`MatchCreated` carries, per player, `playerId` + nickname + optional rating**, besides the time control and colours; game stores them as a snapshot on the game and reuses them for a rematch (AC-06, AC-30). The Cloudflare Access email (game-play ADR-0008) never enters any event — it stays inside the `CurrentPerson` adapter (PRD §6.1).
 - **(b) New event `GameNotStarted { matchId, reason }`** — published when a game cannot be created from `MatchCreated` (e.g. a player already has an active game, AC-22b). Added to the `shared/events` list; `docs/bc-map.md` needs the same entry.
 
 ## Consequences

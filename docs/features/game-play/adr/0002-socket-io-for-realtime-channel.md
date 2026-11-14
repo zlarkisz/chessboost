@@ -44,7 +44,7 @@ game-play is the project's first real-time channel between players. `CLAUDE.md` 
 
 **Negative**
 - Own wire protocol: a plain WebSocket client cannot connect; ~15 KB gzip on the client.
-- **The Socket.IO client buffers `emit` calls while disconnected by default and sends them after reconnecting — this contradicts AC-27b** (a half-move the player thinks was lost could be replayed later). Rule: actions are sent only when `socket.connected` is true; every action carries an ack with a timeout, and no ack means the half-move was not made; after a reconnect the client always takes a full snapshot from the server and never relies on the buffer.
+- **The Socket.IO client buffers `emit` calls while disconnected by default and sends them after reconnecting — this contradicts AC-27b** (a half-move the player thinks was lost could be replayed later). Rule: actions are sent only when `socket.connected` is true; every action carries an ack with a timeout; no ack before the timeout means the half-move is **pending** — the client never resends it by itself, and after the reconnect the full snapshot from the server shows whether the game accepted it (an ack can be lost after the commit). The client never relies on the buffer.
 - Several server processes would need a shared adapter (e.g. Redis) — out of scope while the stack has one process (sad.md §2).
 
 **Neutral**
