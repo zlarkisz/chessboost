@@ -320,18 +320,27 @@ sequenceDiagram
 <!-- 📌 Приклад: «500 IC → партиціонування за кварталом» (не «при зростанні подумаємо»).    -->
 <!-- 🎯 Можна N/A для XS/S функцій, що переюзають існуюче розгортання без змін.            -->
 
-<Topology in 2-3 sentences. Where it runs (k8s / VM / serverless), replicas, scaling thresholds.>
+One NestJS server process — exactly **one replica**, because the per-game queue (game-play ADR-0003), the timers (game-play ADR-0004) and the event bus (game-play ADR-0006) live in one process — next to the Nuxt app (its Node server serves pages; `/game/**` renders in the browser) and PostgreSQL 17. Locally everything runs with `make dev`. No sticky sessions are needed with one replica; the public entry must pass WebSocket upgrades.
 
-**Monitoring:**
-- <Metrics — e.g. Prometheus `<metric_name>`>
-- <Alerts — e.g. "outbox lag > 10 min → page on-call">
-- <Tracing — e.g. OpenTelemetry HTTP spans>
+**Circle 1 hosting (inline decision, no ADR — moving takes hours):** the author's home NAS (UGREEN DXP2800 GT, x86-64, 8 GB RAM, Docker via UGOS App Center).
+
+- `docker compose` with three services: `postgres`, `server` (exactly 1 replica), `web`.
+- Public access through **Cloudflare Tunnel** on a subdomain of `chessboost.games` (e.g. `play.chessboost.games`); no router ports are opened, the NAS admin UI is never exposed, and the containers get no access to the NAS file volumes.
+- Backup: a daily `pg_dump` to a separate NAS volume.
+- Deploy = a short restart; games continue per AC-29b (time while down counts against the side to move).
+
+**Monitoring** (no on-call; logs are reviewed after the scripted games, as PRD §6 measurement requires):
+- Half-move delivery: the server logs the accept time of every half-move, each client logs when it shows it → p95 ≤ 500 ms.
+- Clock agreement: both clients log the remaining time they display for every half-move → difference ≤ 0.5 s.
+- Timeout lateness: game-end time minus the deadline → ≤ 1 s.
+- Every safety-sweep hit is logged as WARN (game-play ADR-0004) — it means a timer was lost.
+- Clients log when the offline / online marker appears; the server logs Socket.IO connect / disconnect per game.
 
 **Scaling thresholds:**
-- <e.g. 500 IC × 5 goals × 26 checkpoints/Q = 65k rows/year — comfortable in one table>
-- <e.g. partitioning by quarter at >500k rows/year>
-
-<!-- For XS/S that doesn't change deployment: <!-- N/A: feature reuses existing deployment unit -->. -->
+- ≥ 20 concurrent games is verified by the bot smoke test before circle 2 (PRD §6).
+- Trigger to run more than one server process: the smoke test fails at 20 games, or zero-downtime deploys become necessary → revisit game-play ADR-0002 (shared Socket.IO adapter), ADR-0003 / ADR-0004 (distributed lock and scheduler) and ADR-0006 (broker).
+- Data volume is negligible: circle 1 ≈ 10 games × ~80 half-moves.
+- Hosting is revisited before circle 2 (§11).
 
 ## 8. Crosscutting concepts
 
