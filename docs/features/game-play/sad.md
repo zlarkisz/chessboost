@@ -353,13 +353,18 @@ One NestJS server process — exactly **one replica**, because the per-game queu
 
 | Concept | Convention | Where defined |
 |---|---|---|
-| Logging | <e.g. structured slog, fields `module=<name>`> | <CLAUDE.md §X or here> |
-| Authentication | <e.g. JWT via session middleware> | <CLAUDE.md §X> |
-| Error handling | <e.g. domain sentinel → ports/errors.go → apperr JSON> | <CLAUDE.md §X> |
-| ID strategy | <e.g. UUID v7 in app layer> | <CLAUDE.md §X> |
-| Internationalisation | <e.g. N/A, English only> | — |
-| Observability | <e.g. OpenTelemetry on HTTP boundaries> | — |
-| Outbox / events | <module-specific patterns, if any> | <here> |
+| Authentication | `CurrentPerson` port read at the Socket.IO handshake. Circle 1: Cloudflare Access (email one-time code, 3-address allowlist); the adapter verifies the signed Access JWT (signature + audience) and maps email → player. The auth feature later replaces the adapter. Local dev: dev-only adapter. | game-play ADR-0008 ([adr/0008-cloudflare-access-identity-until-auth-feature.md](adr/0008-cloudflare-access-identity-until-auth-feature.md)) |
+| Authorization | «Is this person one of the game's two players?» checked in `application` on every action and on joining the room `game:<id>`; someone else's game and a non-existent one get the same «not found or not available» reply (AC-04). | here |
+| Error handling | Domain errors are typed results (`IllegalMove`, `NotYourTurn`, `GameOver`, `DrawOfferNotAllowed`, …); `presentation` maps them to an ack `{ ok: false, code: 'game.<reason>' }`; no exception ever reaches the socket. | here |
+| ID strategy | UUID v7 generated in `application` for entities; clients generate `commandId` UUIDs. | `docs/adr/0003-uuid-v7-for-entity-ids.md` |
+| Time | One `TimeSource` port. Deadlines and moments are persisted as wall-clock time (so downtime counts, AC-29b); in-process timers measure with monotonic time. | game-play ADR-0004 |
+| Validation | Schema-validated DTOs at the gateway, unknown fields rejected; client messages never carry time or results (PRD §6.1). | here |
+| Idempotency | Every action carries a client `commandId`; a repeat returns the original outcome. | game-play ADR-0003 |
+| Abuse limits | Domain rules only in v1 (one draw offer per own half-move — AC-15; repeated Rematch presses count once — AC-23); no rate limit while the Cloudflare Access allowlist is the gate (trigger in §11). | here |
+| Logging | Structured JSON logs with `gameId`, `halfMove`, `commandId` and the measurement events listed in §7. | §7 |
+| Observability | Log-based measurement of the PRD §6 NFRs; no metrics stack in v1. | §7 |
+| Internationalisation | No i18n framework; UI copy comes from `docs/design/`. | — |
+| Events | Contracts in `shared/events`, published after commit, isolated handlers. | game-play ADR-0006 |
 
 ## 9. Architecture decisions
 
