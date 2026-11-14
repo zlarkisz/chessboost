@@ -2,7 +2,7 @@
 status: Approved
 owner: "Gleb Bufin"
 reviewers: []
-updated_at: "2026-11-13"
+updated_at: "2026-11-14"
 feature_size: "M"
 stage: "03"
 ticket: ""
@@ -41,6 +41,8 @@ Traceability:
 - Registration and «how players meet» (invite link, creating a game, wiring the New game screen to a real game) — separate prerequisite features; game-play starts once two registered players have been paired.
 - Rating — a separate brief; game-play shows the opponent's rating when one exists and works fully without it.
 - Move list, legal-move hints, a claim-draw button, a separate disconnect timer or loss for abandoning a game, rematch after an aborted game (it has no game end, so only New game is offered), chat, spectators, replays and matchmaking — outside Approach A (parked approaches C and B; matchmaking is a SPEC non-goal); against a player who walks away, the only protection is that player's own clock.
+- Detecting dead positions beyond material (for example, locked pawn chains): draws by insufficient material and timeout draws are judged only by the material on the board (AC-09, AC-18); such positions play on until repetition or the 50-move rule.
+- A banner or automatic redirect to an unfinished game from other pages — a player returns through the link to the same game (AC-27); entry points belong to the «how players meet» and New game features.
 - Lag compensation — network delay counts against the mover's clock; revisit if scripted games show losses on time with a fraction of a second left on the player's screen.
 
 ## 4. User stories
@@ -105,12 +107,12 @@ Traceability:
 ### AC-03 (US-01) — happy
 **Given** a player's pawn makes a legal half-move to the last rank
 **When** the player chooses the piece it promotes to (queen, rook, bishop or knight)
-**Then** both players see the chosen piece on that square, and it becomes the opponent's turn
+**Then** both players see the chosen piece on that square, and it becomes the opponent's turn; the half-move counts only once the piece is chosen — until then the opponent sees nothing and the mover's clock keeps running, and if the player closes the choice the pawn returns to its square and no half-move is made
 
 ### AC-04 (US-01) — authorization
 **Given** a signed-in person who is not one of the two players of a game
 **When** they open that game or try to make a half-move, resign or offer a draw in it
-**Then** the system does not show them the board, does not accept any of these actions, and tells them that only the two players of this game can open it
+**Then** the system does not show them the board, does not accept any of these actions, and tells them the game was not found or is not available to them — the same message they see for a game that does not exist, so a link never reveals whether a game exists
 
 ### AC-05 (US-01) — cross-context
 **Given** a person who is not signed in (registration is a separate feature)
@@ -125,7 +127,7 @@ Traceability:
 ### AC-07 (US-02) — happy
 **Given** a game with time control 3+2 in which both sides have made their first half-move and it is White's turn
 **When** White makes a half-move
-**Then** White's clock stops, 2 seconds are added to White's remaining time, Black's clock starts, and both players see the same remaining times
+**Then** White's clock stops, 2 seconds are added to White's remaining time, Black's clock starts, and both players see the same remaining times; the increment is added after every half-move of a side, including its first one (as in FIDE: with 3+2, 3:02 after the first half-move)
 
 ### AC-08 (US-02) — domain invariant
 **Given** it is Black's turn, White can still checkmate, and Black is offline (or both players are offline)
@@ -133,9 +135,9 @@ Traceability:
 **Then** the game ends exactly once with end reason Timeout and White as the winner, and both players see this same result whenever they next open the game
 
 ### AC-09 (US-02) — domain invariant
-**Given** it is White's turn and Black has only pieces that cannot checkmate by any legal sequence of moves (for example, a lone king)
+**Given** it is White's turn and, judged only by the material of both sides, Black cannot checkmate — Black has a lone king, or the material of both sides cannot produce mate (for example, king and bishop against king and bishop with all bishops on squares of the same colour)
 **When** White's clock runs out
-**Then** the game ends as a Draw, never as a win for Black, and the result screen says the time ran out but the opponent could not checkmate
+**Then** the game ends as a Draw, never as a win for Black, and the result screen says the time ran out but the opponent could not checkmate; when mate is possible with the material on the board (for example, king and knight against king and queen), Black wins by Timeout
 
 ### AC-10 (US-02) — domain invariant
 **Given** White has almost no time left
@@ -150,7 +152,7 @@ Traceability:
 ### AC-12 (US-03) — happy (alternative)
 **Given** a player has chosen to resign and sees the confirmation
 **When** they cancel it
-**Then** the game continues unchanged, and the side to move's clock kept running while the confirmation was open (before that side's own first half-move, its abort countdown kept running instead)
+**Then** the game continues unchanged, and the side to move's clock kept running while the confirmation was open
 
 ### AC-13 (US-04) — happy
 **Given** a player has offered a draw
@@ -161,6 +163,11 @@ Traceability:
 **Given** a player's draw offer is waiting
 **When** the opponent declines it or makes their half-move instead of answering
 **Then** the offer disappears and the offering player sees that it was declined
+
+### AC-14b (US-04) — domain invariant
+**Given** both sides have made their first half-move and the player is allowed to offer a draw (AC-15)
+**When** the player offers a draw, on their own turn or on the opponent's turn
+**Then** the offer is sent and waits for the opponent's answer; the offering player cannot withdraw it — it disappears only when the opponent accepts it, declines it or makes their half-move (AC-14), or when the game ends
 
 ### AC-15 (US-04) — domain invariant
 **Given** a player's draw offer was declined
@@ -179,8 +186,8 @@ Traceability:
 
 ### AC-18 (US-05) — domain invariant
 **Given** a game in progress
-**When** a half-move produces stalemate, a position where neither side can checkmate by any legal sequence of moves, the same position for the third time (same side to move, same castling and en passant rights), or 50 full moves in a row without a capture or a pawn move
-**Then** the game ends as a Draw at once, without anyone claiming it, and the result screen names which of these four reasons applied
+**When** a half-move produces stalemate, insufficient material (only these: king against king; king and bishop against king; king and knight against king; kings and bishops only, with all bishops on squares of the same colour), the same position for the third time (same side to move, same castling and en passant rights — an en passant right counts only when that capture is a fully legal move, taking pins and check into account), or 50 full moves in a row without a capture or a pawn move
+**Then** the game ends as a Draw at once, without anyone claiming it, and the result screen names which of these four reasons applied; when one half-move triggers several game ends, only the first in this order applies and is shown: Mate > stalemate > insufficient material > repetition > 50-move rule
 
 ### AC-19 (US-05) — domain invariant
 **Given** only the two kings and one bishop for each side remain
@@ -212,6 +219,11 @@ Traceability:
 **When** either player goes offline
 **Then** the offer stays, the player who is still online sees that the other player is offline, and the offer is still shown when the offline player comes back to the result screen
 
+### AC-24b (US-06) — domain invariant
+**Given** a rematch offer is waiting and the offering player is offline
+**When** the opponent tries to accept it
+**Then** the system does not accept it and no new game starts; the opponent can accept once both players are online again, and the offer itself stays (AC-24)
+
 ### AC-25 (US-06) — happy (alternative)
 **Given** a rematch offer is waiting
 **When** the opponent declines it or chooses New game, or the offering player cancels it or moves away from the result screen by an explicit action (for example, opens New game)
@@ -224,8 +236,13 @@ Traceability:
 
 ### AC-27 (US-07) — happy
 **Given** a player lost connection during their game
-**When** they open the game again
+**When** they open the link to that same game again
 **Then** they see the current position, both clocks with the real remaining time, whose turn it is and any draw offer waiting, and they can continue playing
+
+### AC-27b (US-07) — domain invariant
+**Given** a player has the game open and their connection drops right after they make a half-move
+**When** the connection comes back
+**Then** the half-move counts as made only if the game accepted it; the player sees the real current position — if the half-move did not happen, they have to make it again (if their time has not run out)
 
 ### AC-28 (US-07) — domain invariant
 **Given** it is a player's turn, they have already made their own first half-move, and they go offline
@@ -249,8 +266,13 @@ Traceability:
 
 ### AC-32 (US-09) — domain invariant
 **Given** a new game with a Blitz time control (3+2 or 5+0, window 20 seconds) or a Rapid one (10+0, window 60 seconds)
-**When** White does not make its first half-move within the window, or Black does not make its own first half-move within the window after White's
+**When** White does not make its first half-move within the window, which starts the moment the game is created (from a pairing or an accepted rematch) whether or not anyone has opened the board yet, or Black does not make its own first half-move within the window after White's
 **Then** the game is aborted: both players see that it was aborted, with no result and no end reason, and only New game is offered (no rematch, because an aborted game never ended)
+
+### AC-32b (US-09) — happy (alternative)
+**Given** a new game in which at least one side has not yet made its own first half-move
+**When** either player looks at the game's actions
+**Then** they see no Resign and no Offer draw, only Cancel; when either player chooses Cancel, the game is aborted exactly as in AC-32 — no result, no end reason, only New game offered
 
 ### AC-33 (US-09) — domain invariant
 **Given** a new game in which a side has not yet made its own first half-move
@@ -266,11 +288,11 @@ Traceability:
 
 | Aspect | Target | Measurement |
 |---|---|---|
-| Half-move delivery to the opponent | ≤ 500 ms p95 on an ordinary home connection | time from the half-move being accepted to it appearing on the opponent's board, logged in scripted games |
+| Half-move delivery to the opponent | ≤ 500 ms p95 on an ordinary home connection (= 150 ms round-trip latency, no packet loss) | time from the half-move being accepted to it appearing on the opponent's board, logged in scripted games |
 | Clock agreement between the two screens | ≤ 0.5 s difference, measured once the half-move is shown on both boards | both clients log the remaining time they display at that moment for every half-move; logs compared after scripted games (no screen recordings) |
 | Timeout precision | the game ends ≤ 1 s after a clock reaches zero, also when both players are offline | scripted timeout games: logged game-end time vs the moment the time ran out |
 | Offline / online marker | offline shown ≤ 10 s after the opponent loses connection; online shown ≤ 3 s after they return | scripted game with a disconnect, client logs |
-| Return to a game | current position and clocks shown ≤ 3 s after reopening the game on an ordinary connection | scripted game with a disconnect: the client logs the time from opening the page to showing the position |
+| Return to a game | current position and clocks shown ≤ 3 s after reopening the game on an ordinary home connection (150 ms round-trip latency, no packet loss) | scripted game with a disconnect: the client logs the time from opening the page to showing the position |
 | Capacity | ≥ 20 concurrent games while all rows above still hold | smoke test with bots playing games concurrently, run before circle 2 (10–20 people ≈ 10 games, ×2 headroom) |
 
 ## 6.1 Security / privacy
@@ -283,7 +305,7 @@ Traceability:
   - A player tries to move the opponent's pieces or to move out of turn → the half-move is not accepted (AC-02).
   - A tampered screen reports false remaining time or a false game end → ignored; the game's own time and rules decide (AC-08, AC-10).
   - Draw-offer spam → at most one draw offer per own half-move (AC-15); repeated Rematch presses count as one offer (AC-23).
-  - Guessing game links → a link reveals nothing to someone who is not one of the game's players (AC-04, AC-05).
+  - Guessing game links → a link reveals nothing to someone who is not one of the game's players, not even whether the game exists: someone else's game and a non-existent one look the same (AC-04, AC-05).
 - **Security review:** Required — a new authorization boundary (per-game player check) and the project's first real-time channel between players.
 
 ## 7. Metrics / KPIs
@@ -298,3 +320,5 @@ Traceability:
 - [ ] Must a game in progress survive a server restart, and how is the time while the server was down counted? Losing a game on restart would break the invariant "a clock running out must always end the game exactly once". Interim for circle 1 only: deploys happen when no game is in progress. Must be decided before circle 2. — owner: Gleb Bufin, due: before /sdlc:architecture-design
 - [ ] If the timeout scripted game is still red after the first week of implementation, do we cut Approach A's scope? Default now: keep the full scope; the clock spike runs first. — owner: Gleb Bufin, due: end of implementation week 1
 - [ ] Do the scripted games need real separate networks and a phone (device sleep, move sound blocked by the browser)? Default now: one network, desktop browsers. — owner: Gleb Bufin, due: before /sdlc:plan-tests
+- [ ] Does a waiting rematch offer ever expire (for example, after some hours or days)? Default now: it never expires; only the explicit actions in AC-25 and AC-26 withdraw it. — owner: Gleb Bufin, due: before /sdlc:architecture-design
+- [ ] Can a player have more than one active game at a time (for example, accept a rematch while already playing another game)? Default now: not forbidden explicitly in game-play; the match context decides. — owner: Gleb Bufin, due: before /sdlc:architecture-design

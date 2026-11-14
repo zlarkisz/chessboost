@@ -1,6 +1,6 @@
 ---
 status: Living
-updated_at: "2026-11-13"
+updated_at: "2026-11-14"
 ---
 
 # Domain Context — chessboost
@@ -27,7 +27,7 @@ that carry real content. ## Glossary is mandatory; the other two are optional.
 - aborted game — a game cancelled because one side did not make its own first half-move in time; it has no result and no end reason. NOT a game end (no Mate/Resign/Timeout/Draw is recorded) and NOT resignation (resigning gives the opponent the win).
 - clock — the remaining time of each side in one game, started from its time control; only the side to move loses time. NOT the time control (the fixed rule it starts from; the clock is the live remaining time).
 - draw offer — a proposal by one player to end the game as a Draw, which takes effect only if the opponent accepts it. NOT a draw by rule (stalemate, insufficient material, repetition, the 50-move rule), which needs no one's agreement.
-- game — one chess game between two players on one board with one clock, from its first half-move until its game end or its abort. NOT a match (pairing two players is the match context's job) and NOT a series — a rematch is a new game.
+- game — one chess game between two players on one board with one clock, from the moment it is created (from a pairing or an accepted rematch) until its game end or its abort. NOT a match (pairing two players is the match context's job) and NOT a series — a rematch is a new game.
 - game end — the moment a game finishes, always with exactly one end reason: Mate, Resign, Timeout or Draw. NOT an aborted game (it has no result), and NOT check (the game goes on; only mate ends it).
 - half-move — one move by one side (White or Black). NOT a full move (a White+Black pair, as in move numbering «1. e4 e5»).
 - offline — a player's state of having no connection to their game. NOT resignation and NOT a game end.
@@ -43,7 +43,7 @@ that carry real content. ## Glossary is mandatory; the other two are optional.
      never». These are rules ABOVE any single acceptance criterion, not PRD AC. -->
 - A disconnect can never stop the clock: the side to move keeps losing time while offline.
 - A clock running out must always end the game exactly once, with the same result for both players, even when neither player is connected.
-- When a side's clock runs out and the opponent cannot checkmate by any legal sequence of moves, the game must always end as a Draw, never as a win.
+- When a side's clock runs out and the opponent cannot checkmate with the material left on the board (judged by material only, not by the position), the game must always end as a Draw, never as a win.
 - A side that does not make its own first half-move in time must always abort the game; an aborted game can never get a game end.
 - A side's clock can never run before that side's own first half-move; until then only the abort window runs.
 - A rematch must always be accepted by both players, keep the same time control and swap colours.
