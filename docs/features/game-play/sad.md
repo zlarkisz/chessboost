@@ -6,7 +6,7 @@ updated_at: "2026-11-14"
 feature_size: M
 stage: "04-05"
 ticket: ""
-target_surfaces: []  # filled in §4 — subset of: backend-service | web-frontend | mobile-app | desktop-app | cli | worker | library-sdk. Read (never re-derived) by api-forge/complete-sequence-diagrams/break-tasks/plan-tests/review-feature → _shared/surfaces.md
+target_surfaces: [backend-service, web-frontend]  # filled in §4 — subset of: backend-service | web-frontend | mobile-app | desktop-app | cli | worker | library-sdk. Read (never re-derived) by api-forge/complete-sequence-diagrams/break-tasks/plan-tests/review-feature → _shared/surfaces.md
 ---
 
 # Software Architecture Document — game-play
@@ -133,18 +133,19 @@ C4Context
 <!--           наступні стадії. Деривиться з PRD §1 «для кого» + §4 ролей. → _shared/surfaces.md -->
 <!-- 📌 Приклад: «Зберігати урок як таблицю блоків» — стовп, з якого виросло ADR-0001.    -->
 
-**Target surface(s) (the first decision — what's being built):** `<e.g. [backend-service, web-frontend]>`
-<!-- Mirror this list into the frontmatter `target_surfaces`. For each declared UI surface          -->
-<!-- (web-frontend / mobile-app / desktop-app) add a UI-architecture choice below (web → SSR/SPA/   -->
-<!-- hybrid; mobile → native/cross-platform). Multi-surface is usually an ADR (multi-module +       -->
-<!-- irreversible). The UI reuses the repo's existing design system / components / tokens from       -->
-<!-- architecture-map.md §Frontend — it does not design greenfield. → _shared/surfaces.md           -->
+**Target surface(s) (the first decision — what's being built):** `[backend-service, web-frontend]` — game-play ADR-0001 ([adr/0001-build-backend-service-and-web-frontend.md](adr/0001-build-backend-service-and-web-frontend.md)). The backend owns the real-time contract and the state; the existing Nuxt app consumes it.
+
+**Given, not decided here — the server is authoritative** (PRD §6.1): a browser sends only intents («move e2→e4», «resign», «offer draw»); legality, time and the game end are decided by the server, and clients render the server's state. Every choice below follows from this.
+
+**UI-architecture (web-frontend) — inline, no ADR** (gate 1/3: rework < 3 days, web module only). The game route `/game/**` is client-rendered inside the existing Nuxt app (`routeRules: { '/game/**': { ssr: false } }`); the rest of the site keeps its rendering. One composable `useGame(id)` owns the live game state, fed by the real-time channel; the existing `GameScreen` / `GameBoard` / `PlayerClock` / `GameActions` components and the design-system tokens are reused. Until the first server snapshot arrives the page shows a skeleton — an empty board without pieces and inactive clocks, never a guessed position. Rationale: the state only exists live, so server-side HTML would be stale on arrival and would need a second (HTTP) channel.
 
 **Top strategic choices (the seeds for ADRs):**
 
-1. **<e.g. Module isolation through events>** — <2-3 sentences rationale referencing Quality Goals and constraints>.
-2. **<e.g. Single-store persistence (Postgres)>** — <2-3 sentences>.
-3. **<e.g. UI-architecture: SPA consuming the backend API>** — <per declared UI surface; 2-3 sentences>.
+1. **Socket.IO as the real-time channel** — game-play ADR-0002 ([adr/0002-socket-io-for-realtime-channel.md](adr/0002-socket-io-for-realtime-channel.md)). Rooms per game (every tab of both players), acks per action, a heartbeat tuned for the offline marker ≤ 10 s, and automatic reconnection serve QG-2 and QG-3. Actions are sent only while connected, each with an ack and a timeout; after a reconnect the client takes a full snapshot instead of relying on the client's emit buffer (AC-27b).
+2. **Persist each action before broadcast, one queue per game** — game-play ADR-0003 ([adr/0003-persist-each-action-before-broadcast-with-per-game-queue.md](adr/0003-persist-each-action-before-broadcast-with-per-game-queue.md)). PostgreSQL is the source of truth: each accepted action is one transaction (game row with a version + an append-only half-move log), broadcast only after commit. Actions of one game — including timeout and abort checks — are processed strictly one at a time; the version column is a database-level backstop; a client `commandId` makes retries and second tabs idempotent. Serves QG-1 and QG-3.
+3. **Deadline clock, one timer per game, re-armed on boot** — game-play ADR-0004 ([adr/0004-deadline-clock-with-per-game-timer-rearmed-on-boot.md](adr/0004-deadline-clock-with-per-game-timer-rearmed-on-boot.md)). The server stores remaining times and the moment the current turn began (before a side's first half-move: the abort deadline). A per-game timer fires at the deadline and enqueues a time check; on boot all active games are loaded and their timers re-armed; a safety sweep every 5 s catches any overdue active game. Clients receive remaining times and count down with a monotonic timer from receipt. Serves QG-1 and QG-3; validated first by the clock spike (PRD §8).
+4. **chess.js behind a `ChessRules` port** — game-play ADR-0005 ([adr/0005-chess-js-behind-chess-rules-port.md](adr/0005-chess-js-behind-chess-rules-port.md)). Move legality comes from a pinned chess.js in `game/infrastructure`; the domain keeps game-end precedence, insufficient material per AC-18, «can this side mate by material» (AC-09), clocks and offers.
+5. **In-process event bus, published after commit** — game-play ADR-0006 ([adr/0006-in-process-event-bus-published-after-commit.md](adr/0006-in-process-event-bus-published-after-commit.md)). game publishes `GameStarted`, `MoveMade`, `GameEnded` and the new `GameNotStarted { matchId, reason }` (pairing refused, AC-22b) through `shared/events` after the transaction commits, and consumes `MatchCreated`. Handlers are isolated: a consumer's failure never reaches the player's action.
 
 Each tactical decision in later sections should be traceable to one of these strategic seeds. Tactical decisions that *contradict* a strategic choice are red flags — surface them in §11 Risks.
 
