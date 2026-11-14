@@ -397,20 +397,25 @@ ADR files live under `docs/features/game-play/adr/NNNN-<title>.md`. Repo-level A
 
 Each top-3 goal from §1 expanded into a full scenario:
 
-**QG-1. <quality attribute>**
-- **When:** <trigger condition>
-- **Then:** <expected behavior with numbers from PRD NFR>
-- **How verify:** <test / chaos drill / load test / observability>
+**QG-1. Single authoritative outcome**
+- **When:** actions compete — a half-move and a clock reaching zero at nearly the same moment (AC-10), two draw offers at once (AC-16), Rematch pressed twice or by both players (AC-23), the same half-move from two tabs (AC-29), a server restart mid-game (AC-29b).
+- **Then:** exactly one game end or abort; the same result and end reason on both screens — «0 mismatches across all scripted games» (PRD §7).
+- **How verify:** `application` unit tests with a fake `TimeSource` and `GameScheduler` racing competing commands through one game's queue; integration tests on real PostgreSQL for the `version` conflict and the «one active game per player» uniqueness; a restart test — stop the server, let a deadline pass during downtime, start it, assert exactly one `GameEnded`; comparison of both clients' logs after the scripted games.
 
-**QG-2. <quality attribute>**
-- **When:** <trigger>
-- **Then:** <expected>
-- **How verify:** <how>
+**QG-2. Real-time sync**
+- **When:** an «ordinary home connection (= 150 ms round-trip latency, no packet loss)», with up to «≥ 20 concurrent games».
+- **Then:** half-move delivery «≤ 500 ms p95»; clocks «≤ 0.5 s difference, measured once the half-move is shown on both boards»; «offline shown ≤ 10 s after the opponent loses connection; online shown ≤ 3 s after they return» (PRD §6).
+- **How verify:** the §7 logs from the scripted games; 150 ms round-trip latency emulated by a network-latency proxy (e.g. Toxiproxy, 75 ms each way), because the author plays from the same LAN as the NAS (§11); the bot smoke test with 20 concurrent games before circle 2.
 
-**QG-3. <quality attribute>**
-- **When:** <trigger>
-- **Then:** <expected>
-- **How verify:** <how>
+**QG-3. Recoverability**
+- **When:** a player reopens the game after a disconnect; the server restarts; a clock reaches zero while both players are offline.
+- **Then:** «current position and clocks shown ≤ 3 s after reopening the game on an ordinary home connection (150 ms round-trip latency, no packet loss)»; «the game ends ≤ 1 s after a clock reaches zero, also when both players are offline»; after a restart the game continues from its real position (PRD §6, AC-29b).
+- **How verify:** the scripted disconnect game (the client logs the time from opening the page to showing the position); an e2e-through-UI test — two isolated browser sessions, both closed, wait for the deadline, assert in the database that game-end time minus deadline is ≤ 1 s; the restart test from QG-1.
+
+**Security control (not a top-3 goal; PRD §6.1, game-play ADR-0008)**
+- **When:** a foreign or forged request reaches the server.
+- **Then:** without a validly signed Cloudflare Access JWT the connection is rejected; a non-player gets the same reply as for a non-existent game (AC-04); client messages carrying time or result fields are rejected by validation (PRD §6.1).
+- **How verify:** integration tests of the `CurrentPerson` adapter (invalid signature, foreign audience, expired token) and of the gateway (someone else's game and a non-existent one give an identical reply; an unknown DTO field is refused); a security review before the first game on the NAS.
 
 ## 11. Risks and technical debt
 
