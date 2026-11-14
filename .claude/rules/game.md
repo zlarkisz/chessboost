@@ -17,6 +17,7 @@ Owns chess rules: game lifecycle, board, legal moves, clock, end of game.
 ## Prohibitions
 
 - No imports from `src/boost/**` or any other context — only `shared/events`.
-- No chess-engine library imported directly in `domain/` — if one is used, wrap it in a
-  port with the implementation in `infrastructure/` (decision pending: ADR 0002).
+- No chess-engine library imported directly in `domain/` — chess.js sits behind the
+  `ChessRules` port with the implementation in `infrastructure/` (see
+  `docs/features/game-play/adr/0005-chess-js-behind-chess-rules-port.md`).
 - WebSocket message shapes live in `presentation/` DTOs, not in `domain/`.
