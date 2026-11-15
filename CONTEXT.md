@@ -24,6 +24,7 @@ that carry real content. ## Glossary is mandatory; the other two are optional.
 
 <!-- One line per term: name · one-sentence canonical definition · one-sentence boundary
      (what it is NOT / the concept it gets confused with). Alphabetical once there are a few. -->
+- abort window — the limited time a side has to make its own first half-move before the game is aborted; White's starts when the game is created, Black's after White's first half-move. NOT the clock (the side's main clock does not run during it, and the window takes no time from it).
 - aborted game — a game cancelled because one side did not make its own first half-move in time; it has no result and no end reason. NOT a game end (no Mate/Resign/Timeout/Draw is recorded) and NOT resignation (resigning gives the opponent the win).
 - boost — a single-use effect of one type from a fixed set (invulnerability, extra move, teleport) that a piece receives by landing on a boost square. NOT the boost square (the board cell that holds it until taken).
 - boost square — an empty board square holding one boost that no piece has taken yet; the boost is consumed when a piece lands on it. NOT an ordinary square, and NOT the boost itself (the effect it grants).
@@ -35,7 +36,9 @@ that carry real content. ## Glossary is mandatory; the other two are optional.
 - half-move — one move by one side (White or Black). NOT a full move (a White+Black pair, as in move numbering «1. e4 e5»).
 - invulnerability — a boost type: the piece that took it cannot be captured during the opponent's next half-move. NOT a protected piece in the chess sense (one that may be captured but can be recaptured).
 - offline — a player's state of having no connection to their game. NOT resignation and NOT a game end.
+- pairing — the match context's decision that two players will play each other, with a time control and colours, from which a game is created. NOT a game (a pairing can fail to become one, e.g. if a player already has an active game) and NOT a rematch (which creates a game without any pairing).
 - player — a registered person taking part in one game as White or Black; the other player of that game is their opponent. NOT the account/profile (owned by the future player context) and NOT a spectator (someone who watches a game without playing in it).
+- presence — a player's state of being online or offline in one game: online while at least one of their tabs or devices has that game open, offline otherwise. NOT a site-wide online status (it is per game: a player may be on the site but offline in their game).
 - rematch — a new game between the same two players, started right after their previous game ended. NOT «New game» (that goes back to choosing settings and an opponent).
 - rematch offer — one player's request for a rematch that waits for the opponent's acceptance. NOT a rematch itself (no new game exists until it is accepted).
 - resignation — a player's own decision to end the game as a loss for themselves; it gives the end reason Resign. NOT an aborted game (resignation always gives a result) and NOT going offline (a disconnect by itself ends nothing).
