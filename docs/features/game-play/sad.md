@@ -320,6 +320,511 @@ sequenceDiagram
     S-->>WO: online marker within 3 s of the return
 ```
 
+### Create a game from a pairing
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant B as message-bus
+    participant S as service
+    participant D as data-store
+
+    Note over B,S: Trigger - match context publishes MatchCreated with time control, colours and per player playerId, nickname, optional rating
+    B->>S: deliver MatchCreated
+    S->>D: one transaction - insert game with unique match_id, player snapshot, time control, colours, base times, White abort deadline from now
+    Note over S,D: persists game (unique match_id is the idempotency key, unique active game per player)
+    alt committed
+        D-->>S: committed
+        S->>S: arm the game timer at White abort deadline
+        S->>B: publish GameStarted after commit
+    else unique violation on match_id
+        D-->>S: duplicate MatchCreated, nothing written
+        S->>S: ignore - no second game, no event
+    else unique violation on active game per player
+        D-->>S: a player already has an active game, nothing written
+        S->>B: publish GameNotStarted with matchId and reason already active game
+    else store unavailable
+        D-->>S: store failure
+        S->>S: log ERROR with matchId, no game, no event
+        Note over S,B: no retry and no dead-letter in v1 (ADR-0006) - open question in section 11 on who tells the players and match
+    end
+    Note over S,D: Postcondition - at most one game per match_id, White abort window runs from creation even if nobody opened the board
+```
+
+### Open a game
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as user
+    participant UI as ui
+    participant X as external-system
+    participant S as service
+    participant D as data-store
+
+    Note over U,UI: Precondition - a person has a link to a game
+    U->>UI: opens the game link
+    UI->>X: request passes the sign-in gate
+    alt not signed in
+        X-->>U: asks to sign in first
+        U->>X: signs in
+    end
+    X-->>UI: page with a signed identity
+    UI-->>U: skeleton - empty board, inactive clocks
+    UI->>S: connect with the signed identity and join game id
+    S->>S: verify identity signature and audience
+    alt identity invalid
+        S-->>UI: connection refused
+        UI-->>U: asks to sign in again
+    else identity valid
+        S->>D: read game by id
+        D-->>S: game or nothing
+        alt no such game or the person is not one of its two players
+            S-->>UI: not found or not available
+            UI-->>U: the same message in both cases, no board
+        else the person is one of the two players
+            S->>S: join this tab to the game room
+            S-->>UI: full snapshot - position, both remaining times, side to move, waiting offers, opponent nickname and rating if any, result or aborted status
+            UI-->>U: board from own colour, clocks, opponent nickname, result screen if the game ended or was aborted
+        end
+    end
+    Note over U,S: Postcondition - only the two players see the board, an ended or aborted game shows the same stored outcome every time
+```
+
+### Promote a pawn
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as user
+    participant UI as ui
+    participant S as service
+    participant D as data-store
+    participant UO as ui opponent
+
+    Note over U,UI: Precondition - it is the player's turn and a pawn can legally reach the last rank
+    U->>UI: drags the pawn to the last rank
+    UI-->>U: shows the piece choice - queen, rook, bishop, knight
+    Note over UI,S: nothing is sent yet - the opponent sees nothing and the mover's clock keeps running
+    alt the player closes the choice
+        UI-->>U: pawn returns to its square, no half-move made
+    else the player chooses a piece
+        U->>UI: picks the piece
+        UI->>S: half-move request with the promotion piece and commandId
+        S->>S: enqueue in this game's queue, check turn and legality
+        alt legal and on time
+            S->>D: one transaction - position with the promoted piece, half-move log, clocks, version
+            Note over S,D: persists half-move (game id plus half-move number)
+            D-->>S: committed
+            S-->>UI: ack accepted with the new snapshot
+            UI-->>U: chosen piece on the square
+            S-->>UO: update - chosen piece on the square, opponent to move
+        else illegal or not the player's turn
+            S-->>UI: ack rejected, position and clocks unchanged
+            UI-->>U: pawn returns to its square
+        end
+    end
+    Note over U,S: Postcondition - a promotion is exactly one half-move and counts only once the piece is chosen
+```
+
+### Half-move against the clock
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as user
+    participant UI as ui
+    participant S as service
+    participant D as data-store
+    participant UO as ui opponent
+
+    Note over U,S: Precondition - both sides made their first half-move, White to move, time control 3+2
+    U->>UI: makes a half-move with little time left
+    UI->>S: half-move request with commandId
+    S->>S: enqueue in this game's queue
+    S->>D: check idempotency key commandId within this game
+    D-->>S: lookup result
+    alt commandId already processed - repeat or second tab
+        S-->>UI: the original outcome, nothing applied twice
+    else new commandId
+        Note over S: the game's own time decides, not the order in which the half-move and the timer arrive
+        alt received before White's deadline
+            S->>D: one transaction - half-move, White remaining minus elapsed plus 2 s, Black turn start now, version, commandId
+            Note over S,D: persists half-move and clocks (unique commandId per game)
+            D-->>S: committed
+            S-->>UI: ack accepted with both remaining times
+            S-->>UO: update with both remaining times to every tab
+            UI-->>U: White clock stopped with the increment added, Black clock running
+            S->>S: re-arm the timer at Black's deadline
+        else White's deadline already passed
+            S->>D: one transaction - game end Timeout, or Draw if Black cannot mate by material
+            Note over S,D: persists game end (once per game)
+            D-->>S: committed
+            S-->>UI: ack rejected game over, with the result
+            S-->>UO: result and end reason
+            S->>S: publish GameEnded after commit
+        end
+    end
+    Note over U,UO: Postcondition - both screens show the same remaining times or the same single outcome
+```
+
+### Resign with confirmation
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as user
+    participant UI as ui
+    participant S as service
+    participant D as data-store
+    participant UO as ui opponent
+
+    Note over U,UI: Precondition - a game in progress
+    U->>UI: chooses Resign
+    UI-->>U: asks to confirm
+    Note over UI,S: nothing is sent yet - the side to move's clock keeps running
+    alt the player cancels
+        UI-->>U: game continues unchanged
+    else the player confirms
+        UI->>S: resign request with commandId
+        S->>S: enqueue in this game's queue, check the person is a player and the game is active
+        alt a side has not yet made its own first half-move - abort window
+            S-->>UI: ack rejected resign not allowed, only Cancel - state unchanged
+            UI-->>U: actions show only Cancel
+        else game active
+            S->>D: one transaction - game end Resign, opponent wins, waiting draw offer removed
+            Note over S,D: persists game end (once per game)
+            D-->>S: committed
+            S-->>UI: ack accepted with the result
+            S-->>UO: result - Resign, opponent wins
+            UI-->>U: result screen with reason Resign
+            S->>S: publish GameEnded after commit
+        else game already ended
+            S-->>UI: ack rejected game over, stored result unchanged
+            UI-->>U: result screen with the stored reason
+        end
+    end
+    Note over U,UO: Postcondition - a resignation happens only after confirmation and ends the game exactly once
+```
+
+### Offer and answer a draw
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as user
+    participant UI as ui
+    participant S as service
+    participant D as data-store
+    participant UO as ui opponent
+    actor O as opponent
+
+    Note over U,UI: Precondition - a game in progress
+    U->>UI: chooses Offer draw, on own turn or on the opponent's turn
+    UI->>S: draw offer request with commandId
+    S->>S: enqueue in this game's queue, check the person is a player and the game is active
+    alt a side has not yet made its own first half-move - abort window
+        S-->>UI: ack rejected draw offer not allowed, only Cancel - state unchanged
+    else this player's last offer was declined and they have not moved since
+        S-->>UI: ack rejected - can offer again after the next own half-move
+        UI-->>U: says when a new offer is possible
+    else the opponent's offer is already waiting - offers at nearly the same moment
+        S->>D: one transaction - game end Draw by agreement, offers removed
+        Note over S,D: persists game end (once per game)
+        D-->>S: committed
+        S-->>UI: result Draw by agreement
+        S-->>UO: result Draw by agreement
+        S->>S: publish GameEnded after commit
+    else offer allowed
+        S->>D: one transaction - waiting draw offer from this player
+        Note over S,D: persists draw offer (at most one waiting per game)
+        D-->>S: committed
+        S-->>UI: ack accepted, offer waiting, no withdraw action
+        S-->>UO: draw offer shown
+        alt the opponent accepts
+            O->>UO: accepts
+            UO->>S: accept request with commandId
+            S->>D: one transaction - game end Draw by agreement, offer removed
+            D-->>S: committed
+            S-->>UO: result Draw by agreement
+            S-->>UI: result Draw by agreement
+            S->>S: publish GameEnded after commit
+        else the opponent declines or makes a half-move instead
+            O->>UO: declines or moves
+            UO->>S: decline or half-move request
+            S->>D: one transaction - offer removed, offerer blocked until their next own half-move
+            Note over S,D: persists offer removal and the block
+            D-->>S: committed
+            S-->>UI: offer declined
+            UI-->>U: shows the offer was declined
+        else the game ends first, then the opponent tries to accept
+            UO->>S: accept request after the game end
+            S-->>UO: ack rejected game over, offer gone, stored result unchanged
+        end
+    end
+    Note over U,O: Postcondition - a draw by agreement ends the game exactly once, an offer cannot be withdrawn by the offerer
+```
+
+### A half-move ends the game
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as user
+    participant UI as ui
+    participant S as service
+    participant D as data-store
+    participant UO as ui opponent
+    participant B as message-bus
+
+    Note over U,S: Precondition - a game in progress, the player is to move
+    U->>UI: makes a half-move
+    UI->>S: half-move request with commandId
+    S->>S: enqueue, check turn, legality and time, apply the half-move
+    S->>S: check game ends in the order Mate, stalemate, insufficient material, repetition, 50-move rule - only the first applies
+    alt checkmate
+        S->>D: one transaction - half-move with repetition key, game end Mate with winner, waiting offers removed
+        Note over S,D: persists half-move and game end (once per game)
+        D-->>S: committed
+        S-->>UI: result - winner and reason Mate, Rematch and New game
+        S-->>UO: the same result
+        S->>B: publish MoveMade, then GameEnded after commit
+    else stalemate, insufficient material, third repetition or 50 full moves
+        S->>D: one transaction - half-move with repetition key, game end Draw with its specific reason, waiting offers removed
+        Note over S,D: persists half-move and game end with the draw reason (once per game)
+        D-->>S: committed
+        S-->>UI: result - Draw and which of the four reasons, Rematch and New game
+        S-->>UO: the same result
+        S->>B: publish MoveMade, then GameEnded after commit
+    else no game end - for example only kings and bishops on opposite colours
+        S->>D: one transaction - half-move with repetition key, clocks
+        Note over S,D: persists half-move and repetition key (read back for threefold repetition)
+        D-->>S: committed
+        S-->>UO: update - game continues
+        S->>B: publish MoveMade after commit
+    end
+    opt any later action on an ended game - half-move, resign, offer or accept a draw
+        UI->>S: action request
+        S-->>UI: ack rejected game over, stored result and reason unchanged
+    end
+    Note over U,B: Postcondition - one stored game end with one reason, the same on both screens. GameEnded is published at most once (ADR-0006 - a crash between commit and publish loses it). The stored game end is the source of truth, so the game counts once in results (AC-21)
+```
+
+### Rematch accepted
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as user
+    participant UI as ui
+    participant S as service
+    participant D as data-store
+    participant UO as ui opponent
+    actor O as opponent
+    participant B as message-bus
+
+    Note over U,UO: Precondition - the game has ended (not aborted), both players see the result screen
+    U->>UI: presses Rematch
+    UI->>S: rematch request with commandId
+    S->>S: enqueue in the ended game's queue
+    alt this player's offer is already waiting - pressed twice
+        S-->>UI: ack accepted, still the same single offer
+    else the opponent's offer is already waiting - both pressed at nearly the same moment
+        Note over S: the two presses count as agreement
+    else no offer waiting
+        S->>D: one transaction - rematch offer from this player
+        Note over S,D: persists rematch offer (at most one waiting per ended game)
+        D-->>S: committed
+        S-->>UO: rematch offer shown
+        O->>UO: accepts
+        UO->>S: accept request with commandId
+        alt the offering player is offline
+            S-->>UO: ack rejected - can accept once both are online, the offer stays
+        else both players online
+            Note over S: agreement reached
+        end
+    end
+    Note over S,D: only on agreement
+    S->>D: one transaction - new game with the same players, same time control, swapped colours, White abort deadline from now, offer closed, other open rematch offers of both players cancelled
+    Note over S,D: persists game (unique active game per player) and closes rematch offers
+    alt committed
+        D-->>S: committed
+        S->>S: arm the new game's timer at White abort deadline
+        S-->>UI: go to the new game's board
+        S-->>UO: go to the new game's board
+        S->>B: publish GameStarted after commit
+    else a player already has an active game
+        D-->>S: uniqueness violation, nothing written
+        S-->>UI: no new game - already have an active game
+        S-->>UO: no new game - already have an active game
+    end
+    Note over U,O: Postcondition - at most one new game per ended game, colours swapped
+```
+
+### Rematch offer kept or withdrawn
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as user
+    participant UI as ui
+    participant S as service
+    participant D as data-store
+    participant UO as ui opponent
+    actor O as opponent
+
+    Note over U,UO: Precondition - the game has ended and the player's rematch offer is waiting
+    alt either player goes offline
+        S->>S: heartbeat misses, mark the player offline - the offer is not touched
+        S-->>UO: offline marker next to the player's nickname, offer still shown
+        UI->>S: the player reconnects to the result screen
+        S->>D: read the ended game and its waiting offer
+        D-->>S: offer still waiting
+        S-->>UI: snapshot with the offer still waiting
+    else the opponent declines
+        O->>UO: declines
+        UO->>S: decline request with commandId
+        S->>D: one transaction - set the rematch offer closed timestamp
+        Note over S,D: persists rematch offer closed timestamp only, no close reason - every path shows the same outcome
+        D-->>S: committed
+        S-->>UI: the rematch will not happen
+    else the player cancels the offer
+        U->>UI: cancels the offer
+        UI->>S: cancel request with commandId
+        S->>D: one transaction - set the rematch offer closed timestamp
+        D-->>S: committed
+        S-->>UO: the rematch will not happen
+    else either player chooses New game
+        U->>UI: chooses New game
+        UI->>S: leave the result screen with commandId
+        S->>D: one transaction - set the rematch offer closed timestamp
+        D-->>S: committed
+        UI-->>U: New game screen (owned by the New game feature)
+        S-->>UO: the rematch will not happen
+    else either player starts another game - a pairing or a rematch with someone else
+        S->>D: inside that game's creation transaction - cancel open rematch offers of both its players
+        Note over S,D: persists rematch offer closed timestamp together with the new game
+        D-->>S: committed
+        S-->>UO: the rematch will not happen
+    end
+    Note over U,O: Postcondition - an offer disappears only by an explicit action or another game starting, never by going offline
+```
+
+### Abort a game nobody started
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as user
+    participant UI as ui
+    participant S as service
+    participant D as data-store
+    participant UO as ui opponent
+
+    Note over U,UO: Precondition - a new game, the side to move has not made its own first half-move (window 20 s Blitz, 60 s Rapid)
+    S-->>UI: snapshot - main clock not running, abort countdown, only Cancel among the actions
+    S-->>UO: the same countdown, only Cancel
+    alt the side to move makes its first half-move in time
+        UI->>S: half-move request with commandId
+        S->>D: one transaction - half-move, then Black abort deadline, or main clocks start after Black's first half-move
+        Note over S,D: persists half-move and the next deadline
+        D-->>S: committed
+        S->>S: re-arm the timer at the next deadline
+    else either player chooses Cancel
+        U->>UI: chooses Cancel
+        UI->>S: cancel request with commandId
+        S->>S: enqueue, check at least one side has not yet made its own first half-move
+        alt both sides already made their first half-move
+            S-->>UI: ack rejected cancel not allowed - state unchanged
+        else at least one side has not - also while Black's window runs after White's first half-move
+            S->>D: one transaction - status aborted, no result, no end reason
+            Note over S,D: persists game status aborted (once per game)
+            D-->>S: committed
+            S-->>UI: aborted, only New game
+            S-->>UO: aborted, only New game
+        end
+    else the abort window runs out
+        Note over S: Trigger - the timer at the abort deadline, or the 5 s safety sweep if the timer was lost
+        S->>S: enqueue an abort check in this game's queue
+        S->>D: one transaction - re-read status and deadline as the idempotency check
+        alt game already aborted, ended or past its first half-moves, or deadline not reached
+            S->>S: skip, nothing changes
+        else deadline passed
+            S->>D: status aborted, no result, no end reason
+            D-->>S: committed
+            S-->>UI: aborted, only New game
+            S-->>UO: aborted, only New game
+        end
+        Note over S,D: retry is the 5 s safety sweep, each hit logged as WARN - no dead-letter in v1 (ADR-0004)
+    end
+    Note over U,UO: Postcondition - aborted at most once, no GameEnded published, so an aborted game never counts in results (AC-34)
+```
+
+### Coverage: US/AC → flows
+
+Seed flows are cited by their bold titles: `Critical flow 1` (a half-move, accepted or rejected), `Critical flow 2` (a clock runs out while both players are offline, across a server restart), `Critical flow 3` (reconnect after a drop right after a half-move).
+
+| ID | Realized by (§6 heading) | How | Note |
+|---|---|---|---|
+| US-01 | `Create a game from a pairing`, `Open a game`, `Critical flow 1`, `Promote a pawn` | flow | |
+| US-02 | `Half-move against the clock`, `Critical flow 2` | flow | |
+| US-03 | `Resign with confirmation` | flow | |
+| US-04 | `Offer and answer a draw` | flow | |
+| US-05 | `A half-move ends the game` | flow | |
+| US-06 | `Rematch accepted`, `Rematch offer kept or withdrawn` | flow | |
+| US-07 | `Critical flow 3`, `Critical flow 2` | flow | |
+| US-08 | `Open a game`, `Critical flow 3` | flow | |
+| US-09 | `Abort a game nobody started` | flow | |
+| AC-01 | `Critical flow 1` | flow | |
+| AC-02 | `Critical flow 1` | branch | `else illegal or not White's turn` |
+| AC-03 | `Promote a pawn` | flow | incl. `alt the player closes the choice` |
+| AC-04 | `Open a game` | branch | `alt no such game or the person is not one of its two players` |
+| AC-05 | `Open a game` | branch | `alt not signed in` |
+| AC-06 | `Create a game from a pairing`, `Open a game` | flow | board from own colour, base times, nickname in the snapshot |
+| AC-07 | `Half-move against the clock` | branch | `alt received before White's deadline` |
+| AC-08 | `Critical flow 2` | flow | |
+| AC-09 | `Critical flow 2`, `Half-move against the clock` | branch | `else White's deadline already passed` (Timeout, or Draw if the opponent cannot mate by material) |
+| AC-10 | `Half-move against the clock` | flow | the game's own time decides, not arrival order |
+| AC-11 | `Resign with confirmation` | branch | `else game active` |
+| AC-12 | `Resign with confirmation` | branch | `alt the player cancels` |
+| AC-13 | `Offer and answer a draw` | branch | `alt the opponent accepts` |
+| AC-14 | `Offer and answer a draw` | branch | `else the opponent declines or makes a half-move instead` |
+| AC-14b | `Offer and answer a draw` | branch | `else offer allowed` |
+| AC-15 | `Offer and answer a draw` | branch | `else this player's last offer was declined and they have not moved since` |
+| AC-16 | `Offer and answer a draw` | branch | `else the opponent's offer is already waiting - offers at nearly the same moment` |
+| AC-17 | `A half-move ends the game` | branch | `alt checkmate` |
+| AC-18 | `A half-move ends the game` | branch | `else stalemate, insufficient material, third repetition or 50 full moves` |
+| AC-19 | `A half-move ends the game` | branch | same-colour bishops: the draw branch · opposite colours: `else no game end` |
+| AC-20 | `A half-move ends the game`, `Resign with confirmation`, `Offer and answer a draw` | branch | `opt any later action on an ended game` · `else game already ended` · `else the game ends first, then the opponent tries to accept` |
+| AC-21 | `A half-move ends the game`, `Open a game` | flow | stored game end is the source of truth; `GameEnded` at most once (ADR-0006) |
+| AC-22 | `Rematch accepted` | branch | `alt committed` |
+| AC-22b | `Rematch accepted`, `Create a game from a pairing` | branch | `else a player already has an active game` · `else unique violation on active game per player` |
+| AC-23 | `Rematch accepted` | branch | `alt this player's offer is already waiting - pressed twice` · `else the opponent's offer is already waiting` |
+| AC-24 | `Rematch offer kept or withdrawn` | branch | `alt either player goes offline` |
+| AC-24b | `Rematch accepted` | branch | `alt the offering player is offline` |
+| AC-25 | `Rematch offer kept or withdrawn` | branch | `else the opponent declines` · `else the player cancels the offer` · `else either player chooses New game` |
+| AC-25b | `Rematch offer kept or withdrawn`, `Rematch accepted` | branch | `else either player starts another game` · cancellation inside the creation transaction |
+| AC-26 | `Rematch offer kept or withdrawn` | branch | `else either player chooses New game` |
+| AC-27 | `Critical flow 3` | flow | |
+| AC-27b | `Critical flow 3` | branch | `alt the half-move was committed before the drop` · `else it was never received` |
+| AC-28 | `Critical flow 2` | flow | |
+| AC-29 | `Critical flow 1`, `Half-move against the clock` | branch | update to every tab in the room · `alt commandId already processed - repeat or second tab` |
+| AC-29b | `Critical flow 2` | flow | |
+| AC-30 | `Open a game` | branch | `else the person is one of the two players` (nickname, rating if any) |
+| AC-31 | `Critical flow 3` | flow | |
+| AC-32 | `Abort a game nobody started`, `Create a game from a pairing` | branch | `else the abort window runs out` · window starts at creation |
+| AC-32b | `Abort a game nobody started`, `Resign with confirmation`, `Offer and answer a draw` | branch | `else either player chooses Cancel` · abort-window rejection of Resign / Offer draw |
+| AC-33 | `Abort a game nobody started` | flow | countdown snapshot, main clock not running |
+| AC-34 | `Abort a game nobody started`, `Open a game` | flow | no `GameEnded` for an aborted game |
+
+Coverage: 9/9 user stories · 41/41 ACs — 0 non-runtime N/A.
+
+**Flags:**
+- Async flows `Create a game from a pairing` and `Abort a game nobody started` have **no dead-letter** — ADR-0006 only logs handler errors, ADR-0004 uses the 5 s safety sweep as the retry. Deliberate deviation from the sequence template; linked open question in §11 (storage failure on `MatchCreated`) — for `/sdlc:decide-adr` if a retry / outbox is chosen.
+- `GameEnded` is **at most once** (ADR-0006, no outbox) — the rating feature must read the stored game end, not rely on the event alone; revisit the outbox trigger in §11 before rating consumes it.
+- `external-system` (sign-in gate, Cloudflare Access) in `Open a game` is in §3 but not drawn in the §5 C4 Container view — for architecture-design.
+- Seed flows `Critical flow 1–3` use concrete participant names and bold titles instead of `###` headings — left untouched (additive rule); normalize by a deliberate manual edit if wanted.
+
 ## 7. Deployment view
 
 <!-- 🎯 Навіщо: ТОПОЛОГІЯ, яку DevOps має знати без читання Helm-чартів — скільки реплік,  -->
@@ -457,6 +962,7 @@ Each top-3 goal from §1 expanded into a full scenario:
 | Presence is lost on restart; players look offline for a few seconds (game-play ADR-0007) | Low | Rebuilt as clients reconnect | Gleb Bufin |
 | A rematch takes nickname and rating from the previous game, so after a rated game it shows a stale rating | Low | Revisit at the architecture-design of the rating feature | Gleb Bufin |
 | Dependency on Cloudflare Access until the auth feature ships (game-play ADR-0008) | Low | `CurrentPerson` port — replacing the adapter is a one-class change | Gleb Bufin |
+| On a storage failure while handling `MatchCreated` the pairing exists but there is no game and no `GameNotStarted` is emitted — who tells the players / the match context? (§6 «Create a game from a pairing») | Open question | Undecided — candidates: emit `GameNotStarted` with reason «storage failure» from the error branch, or a retry / outbox on the handler | Gleb Bufin |
 
 **Accepted debt (acceptable in v1, plan to fix later):**
 - No lag compensation — network delay counts against the mover (PRD §3 non-goal).
