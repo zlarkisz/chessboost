@@ -44,7 +44,8 @@ Levels: **U** unit · **I** integration · **Ct** contract · **Cmp** component 
 | AC-03 | closing the promotion choice sends nothing | Cmp | pawn back on its square, no action emitted, mover's clock still running | T20 |
 | AC-04 | non-player and non-existent game get the same answer | U | identical «not found or not available» result from the use cases | T9 |
 | AC-04 | non-player cannot open or act in a game | I | no board sent; half-move, resign and draw offer refused; reply identical to a non-existent game | T14 |
-| AC-05 | connection without a valid identity is refused | I | missing, badly signed, foreign-audience and expired tokens all rejected at the handshake; a valid token opens the game only for its two players | T13, T14 |
+| AC-05 | connection without an identity is refused | I | a handshake without an identity is rejected; a dev identity opens the game only for its two players | T13, T14 |
+| AC-05 | badly signed, foreign-audience and expired tokens are refused | I | each rejected at the handshake; a valid token opens the game only for its two players — **deferred** with the Cloudflare Access adapter | [T13-CF](./tasks/deferred/cf-access-adapter.md) |
 
 ### US-02 — Play under a running clock
 
@@ -197,6 +198,7 @@ Dedicated error / authorization rows above: AC-02, AC-04, AC-05, AC-15, AC-20, A
 - Repeated pairing for the same match → no second game (I, T11).
 - Dev-only identity adapter refuses to start outside development (U, T13).
 - Storage failure while handling a pairing → **not tested: behaviour undecided** (sad.md §11 open question); add a row once that decision is made.
+- Cloudflare Access token checks (signature, audience, expiry, unknown email) → **deferred** with the adapter to the deploy ([T13-CF](./tasks/deferred/cf-access-adapter.md)); locally identity comes from the dev adapter.
 
 ## Test data
 
