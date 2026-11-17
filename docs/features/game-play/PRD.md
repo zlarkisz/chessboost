@@ -333,4 +333,5 @@ Traceability:
 ## 8. Open questions
 
 - [ ] If the timeout scripted game is still red after the first week of implementation, do we cut Approach A's scope? Default now: keep the full scope; the clock spike runs first. — owner: Gleb Bufin, due: end of implementation week 1
-- [ ] Do the scripted games need real separate networks and a phone (device sleep, move sound blocked by the browser)? Default now: one network, desktop browsers. — owner: Gleb Bufin, due: before /sdlc:plan-tests
+- [x] Do the scripted games need real separate networks and a phone (device sleep, move sound blocked by the browser)? Default now: one network, desktop browsers. — owner: Gleb Bufin, due: before /sdlc:plan-tests
+  - Decided 2026-11-17 (test-plan.md): desktop browsers, the author through a 150 ms latency proxy, friends from their own home networks, and one of the 10 scripted games from a phone (screen sleep → return, move sound).
