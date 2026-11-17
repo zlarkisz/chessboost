@@ -1,43 +1,41 @@
 ---
 id: T13
-title: "Add the CurrentPerson port with the Cloudflare Access JWT adapter and a dev-only adapter"
+title: "Add the CurrentPerson port and a dev-only adapter"
 layer: "infra"
 deps: ["T1"]
 acs: ["AC-04", "AC-05"]
-files_hint: ["apps/server/src/game/domain/ports/current-person.ts", "apps/server/src/game/infrastructure/cloudflare-access-current-person.ts", "apps/server/src/game/infrastructure/dev-current-person.ts"]
+files_hint: ["apps/server/src/game/domain/ports/current-person.ts", "apps/server/src/game/infrastructure/dev-current-person.ts"]
 owner: "Gleb Bufin"
-estimate: "M"
+estimate: "S"
 status: "todo"
 ---
 
-# T13 — Add the CurrentPerson port with the Cloudflare Access JWT adapter and a dev-only adapter
+# T13 — Add the CurrentPerson port and a dev-only adapter
 
 ## Why
 
-Identity comes from Cloudflare Access until the auth feature exists ([ADR-0008](../adr/0008-cloudflare-access-identity-until-auth-feature.md), [sad §8](../sad.md) Authentication and Privacy).
+Identity comes from Cloudflare Access until the auth feature exists ([ADR-0008](../adr/0008-cloudflare-access-identity-until-auth-feature.md), [sad §8](../sad.md) Authentication and Privacy). Module 7 runs game-play locally only, so this task ships the port and the dev adapter; the Cloudflare Access adapter is deferred to the deploy ([deferred/cf-access-adapter.md](./deferred/cf-access-adapter.md)). The port keeps the swap local to one binding.
 
-**ACs:** AC-04, AC-05 ([PRD §5](../PRD.md)) · **Blocked by:** T1 · **Estimate:** M
+**ACs:** AC-04, AC-05 — the missing-identity part only; token checks move with the deferred adapter ([PRD §5](../PRD.md)) · **Blocked by:** T1 · **Estimate:** S
 
 ## What
 
-- `CurrentPerson` port: resolve a player id from the handshake.
-- The Cloudflare Access adapter:
-  - verifies the signed JWT (signature from the team keys, audience, expiry);
-  - maps the email to a player id through an allowlist mapping (config variable names in `.env.example`).
-- A dev-only adapter, which refuses to bind in production.
-- The email never leaves the adapter.
+- `CurrentPerson` port: resolve a player id from the handshake, or report the connection as unauthenticated.
+- A dev-only adapter:
+  - resolves the player id the local session presents;
+  - a handshake without an identity is unauthenticated;
+  - refuses to bind in production.
 
-**Files:** `apps/server/src/game/domain/ports/current-person.ts`, `apps/server/src/game/infrastructure/cloudflare-access-current-person.ts`, `apps/server/src/game/infrastructure/dev-current-person.ts`
+**Files:** `apps/server/src/game/domain/ports/current-person.ts`, `apps/server/src/game/infrastructure/dev-current-person.ts`
 
 ## Definition of Done
 
-- [ ] Tests with a locally generated key pair pass for:
-  - a valid token resolves to the player;
-  - an invalid signature, a foreign audience, an expired token or an unknown email are unauthenticated;
+- [ ] Tests pass for:
+  - a handshake with a dev identity resolves to the player;
+  - a handshake without an identity is unauthenticated;
   - the dev adapter throws when bound with `NODE_ENV=production`.
 - [ ] lint + typecheck clean
 
 ## Notes
 
-- Security review is required before the first game on the NAS ([PRD §6.1](../PRD.md)).
-- Real keys are never committed.
+- Not in scope: the Cloudflare Access JWT adapter — see [deferred/cf-access-adapter.md](./deferred/cf-access-adapter.md).

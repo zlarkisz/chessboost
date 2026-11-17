@@ -250,7 +250,7 @@
     },
     {
       "id": "T13",
-      "title": "Add the CurrentPerson port with the Cloudflare Access JWT adapter and a dev-only adapter",
+      "title": "Add the CurrentPerson port and a dev-only adapter",
       "layer": "infra",
       "deps": [
         "T1"
@@ -259,10 +259,9 @@
         "AC-04",
         "AC-05"
       ],
-      "dod": "adapter tests with a local key pair pass for a valid token and reject a bad signature, foreign audience, expired token and unknown email; the dev adapter refuses production",
+      "dod": "tests pass for a dev identity resolving to the player and a handshake without an identity being unauthenticated; the dev adapter refuses production",
       "files_hint": [
         "apps/server/src/game/domain/ports/current-person.ts",
-        "apps/server/src/game/infrastructure/cloudflare-access-current-person.ts",
         "apps/server/src/game/infrastructure/dev-current-person.ts"
       ]
     },

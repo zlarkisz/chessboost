@@ -17,7 +17,7 @@
 | T10 | [Add TimerService: one timer per game, CheckTime, re-arm on boot and the 5 s safety sweep](./t10-timer-service.md) | app | Gleb Bufin | M | T9 | todo |
 | T11 | [Publish integration events after commit and create games from MatchCreated](./t11-integration-events-and-game-creation.md) | app | Gleb Bufin | M | T9 | todo |
 | T12 | [Add the in-memory PresenceRegistry that counts a player's tabs per game](./t12-presence-registry.md) | app | Gleb Bufin | S | T1 | todo |
-| T13 | [Add the CurrentPerson port with the Cloudflare Access JWT adapter and a dev-only adapter](./t13-current-person-adapters.md) | infra | Gleb Bufin | M | T1 | todo |
+| T13 | [Add the CurrentPerson port and a dev-only adapter](./t13-current-person-adapters.md) | infra | Gleb Bufin | S | T1 | todo |
 | T14 | [Build GameGateway: handshake identity, rooms, game:join, game:move, snapshots and presence](./t14-game-gateway-core.md) | ports | Gleb Bufin | L | T2, T9, T12, T13 | todo |
 | T15 | [Wire resign, cancel and the draw actions end to end: use cases and gateway handlers](./t15-resign-cancel-draw-slice.md) | ports | Gleb Bufin | M | T14 | todo |
 | T16 | [Wire the rematch end to end: offer, accept into a new game, close](./t16-rematch-slice.md) | ports | Gleb Bufin | L | T11, T14 | todo |
@@ -30,3 +30,9 @@
 | T23 | [Run end-to-end scripted games through two browser sessions against the real server and database](./t23-e2e-scripted-games.md) | tests | Gleb Bufin | L | T17, T20, T21, T22 | todo |
 
 **Total:** 23 tasks, ~15.25 person-days (S = 2 h, M = half a day, L = one day).
+
+## Deferred (not in tasks.json)
+
+| # | Task | When | Status |
+|---|---|---|---|
+| T13-CF | [Add the Cloudflare Access JWT adapter for CurrentPerson](./deferred/cf-access-adapter.md) | before the first game on the NAS | deferred |
