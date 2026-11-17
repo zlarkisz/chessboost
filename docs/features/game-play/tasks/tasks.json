@@ -1,0 +1,505 @@
+{
+  "slug": "game-play",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Bootstrap the NestJS server with Jest so make test, make arch and make typecheck pass",
+      "layer": "wiring",
+      "deps": [],
+      "acs": [],
+      "dod": "make test (with one smoke test), make arch and make typecheck are green and the server starts with make dev",
+      "files_hint": [
+        "apps/server/package.json",
+        "apps/server/src/main.ts",
+        "apps/server/src/app.module.ts",
+        "apps/server/jest.config.ts",
+        "apps/server/tsconfig.json",
+        "apps/server/test/"
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Create the shared @chessboost/contracts package with typed Socket.IO events from events.md",
+      "layer": "wiring",
+      "deps": [
+        "T1"
+      ],
+      "acs": [],
+      "dod": "the package typechecks, a compile-time test covers every events.md event name, error code and GameSnapshot field, and both apps typecheck against it",
+      "files_hint": [
+        "packages/contracts/",
+        "pnpm-workspace.yaml"
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Spike the deadline clock: TimeControl, Clock and the TimeSource port",
+      "layer": "domain",
+      "deps": [
+        "T1"
+      ],
+      "acs": [
+        "AC-07",
+        "AC-10",
+        "AC-32",
+        "AC-33"
+      ],
+      "dod": "clock unit tests with a fake TimeSource pass for the increment (3+2 gives 3:02), the deadline boundary, the not-yet-running main clock and the 20 s / 60 s abort windows",
+      "files_hint": [
+        "apps/server/src/game/domain/clock/",
+        "apps/server/src/game/domain/ports/time-source.ts"
+      ]
+    },
+    {
+      "id": "T4",
+      "title": "Add the ChessRules port and its chess.js adapter",
+      "layer": "infra",
+      "deps": [
+        "T1"
+      ],
+      "acs": [
+        "AC-02",
+        "AC-03",
+        "AC-18"
+      ],
+      "dod": "adapter tests pass for illegal moves, promotion pieces, mate, stalemate, the en-passant-aware repetition key and the 50-move half-move clock",
+      "files_hint": [
+        "apps/server/src/game/domain/ports/chess-rules.ts",
+        "apps/server/src/game/infrastructure/chess-js-rules.ts"
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Build the Game aggregate: creation, half-moves, game-end precedence, material rules and time checks",
+      "layer": "domain",
+      "deps": [
+        "T3",
+        "T4"
+      ],
+      "acs": [
+        "AC-01",
+        "AC-02",
+        "AC-03",
+        "AC-06",
+        "AC-08",
+        "AC-09",
+        "AC-17",
+        "AC-18",
+        "AC-19",
+        "AC-20",
+        "AC-28",
+        "AC-32",
+        "AC-33"
+      ],
+      "dod": "aggregate unit tests pass for every listed AC: turn switch, illegal-move no-op, promotion, mate, the four draw reasons with precedence, bishop colours, timeout win vs draw, abort, and refusal after the end",
+      "files_hint": [
+        "apps/server/src/game/domain/game.ts",
+        "apps/server/src/game/domain/end-reason.ts",
+        "apps/server/src/game/domain/material.ts",
+        "apps/server/src/game/domain/errors.ts"
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "Add resign, cancel and draw offers to the Game aggregate",
+      "layer": "domain",
+      "deps": [
+        "T5"
+      ],
+      "acs": [
+        "AC-11",
+        "AC-13",
+        "AC-14",
+        "AC-14b",
+        "AC-15",
+        "AC-16",
+        "AC-20",
+        "AC-32b"
+      ],
+      "dod": "aggregate unit tests pass for resign, cancel and the draw-offer rules incl. the blocked re-offer and simultaneous offers ending once",
+      "files_hint": [
+        "apps/server/src/game/domain/game.ts",
+        "apps/server/src/game/domain/draw-offer.ts"
+      ]
+    },
+    {
+      "id": "T7",
+      "title": "Write the Drizzle schema for the 5 game-play tables, generate the migration and diff it against the staged SQL",
+      "layer": "migration",
+      "deps": [
+        "T1"
+      ],
+      "acs": [
+        "AC-21",
+        "AC-22b",
+        "AC-29"
+      ],
+      "dod": "drizzle-kit generates the live migration from schema.ts, its SQL matches the staged .up.sql (differences listed and resolved), and make migrate applies it on an empty database",
+      "files_hint": [
+        "apps/server/src/infrastructure/db/schema/",
+        "apps/server/src/infrastructure/db/migrations/",
+        "apps/server/src/infrastructure/db/connection.ts",
+        "apps/server/drizzle.config.ts"
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "Implement DrizzleGameRepository with one transaction per action, a version check and the command ledger",
+      "layer": "infra",
+      "deps": [
+        "T6",
+        "T7"
+      ],
+      "acs": [
+        "AC-21",
+        "AC-22b",
+        "AC-25b",
+        "AC-27b",
+        "AC-29",
+        "AC-29b"
+      ],
+      "dod": "integration tests on real PostgreSQL pass for round-trip, version conflict, duplicate commandId, one active game per player, release on end, and one open rematch offer per game",
+      "files_hint": [
+        "apps/server/src/game/domain/ports/game-repository.ts",
+        "apps/server/src/game/infrastructure/drizzle-game-repository.ts"
+      ]
+    },
+    {
+      "id": "T9",
+      "title": "Build the per-game command queue and pipeline with MakeHalfMove and GetSnapshot",
+      "layer": "app",
+      "deps": [
+        "T8"
+      ],
+      "acs": [
+        "AC-01",
+        "AC-02",
+        "AC-04",
+        "AC-10",
+        "AC-27b",
+        "AC-29"
+      ],
+      "dod": "application tests pass for strict per-game ordering, idempotent commandId, identical not-found for non-players, and the move-vs-deadline race decided by game time",
+      "files_hint": [
+        "apps/server/src/game/application/command-queue/",
+        "apps/server/src/game/application/make-half-move.ts",
+        "apps/server/src/game/application/get-snapshot.ts"
+      ]
+    },
+    {
+      "id": "T10",
+      "title": "Add TimerService: one timer per game, CheckTime, re-arm on boot and the 5 s safety sweep",
+      "layer": "app",
+      "deps": [
+        "T9"
+      ],
+      "acs": [
+        "AC-08",
+        "AC-09",
+        "AC-28",
+        "AC-29b",
+        "AC-32",
+        "AC-33"
+      ],
+      "dod": "tests with fake scheduler and time pass for one Timeout per deadline, exactly one end after a simulated restart, the sweep catching a lost timer, the timeout draw by material, and abort on window expiry",
+      "files_hint": [
+        "apps/server/src/game/application/timer-service.ts",
+        "apps/server/src/game/application/check-time.ts",
+        "apps/server/src/game/domain/ports/game-scheduler.ts",
+        "apps/server/src/game/infrastructure/node-timer-scheduler.ts"
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "Publish integration events after commit and create games from MatchCreated",
+      "layer": "app",
+      "deps": [
+        "T9"
+      ],
+      "acs": [
+        "AC-06",
+        "AC-21",
+        "AC-22b",
+        "AC-25b",
+        "AC-32",
+        "AC-34"
+      ],
+      "dod": "tests pass for game creation from MatchCreated with GameStarted after commit, GameNotStarted on an active game, isolated consumer failure, and GameEnded once and never for an abort",
+      "files_hint": [
+        "apps/server/src/shared/events/",
+        "apps/server/src/game/application/event-publisher.ts",
+        "apps/server/src/game/application/create-game-from-pairing.ts",
+        "apps/server/src/game/infrastructure/in-process-event-publisher.ts"
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Add the in-memory PresenceRegistry that counts a player's tabs per game",
+      "layer": "app",
+      "deps": [
+        "T1"
+      ],
+      "acs": [
+        "AC-24",
+        "AC-31"
+      ],
+      "dod": "unit tests pass for multi-tab online counting, a single offline transition, reconnect and per-game isolation",
+      "files_hint": [
+        "apps/server/src/game/application/presence-registry.ts"
+      ]
+    },
+    {
+      "id": "T13",
+      "title": "Add the CurrentPerson port with the Cloudflare Access JWT adapter and a dev-only adapter",
+      "layer": "infra",
+      "deps": [
+        "T1"
+      ],
+      "acs": [
+        "AC-04",
+        "AC-05"
+      ],
+      "dod": "adapter tests with a local key pair pass for a valid token and reject a bad signature, foreign audience, expired token and unknown email; the dev adapter refuses production",
+      "files_hint": [
+        "apps/server/src/game/domain/ports/current-person.ts",
+        "apps/server/src/game/infrastructure/cloudflare-access-current-person.ts",
+        "apps/server/src/game/infrastructure/dev-current-person.ts"
+      ]
+    },
+    {
+      "id": "T14",
+      "title": "Build GameGateway: handshake identity, rooms, game:join, game:move, snapshots and presence",
+      "layer": "ports",
+      "deps": [
+        "T2",
+        "T9",
+        "T12",
+        "T13"
+      ],
+      "acs": [
+        "AC-01",
+        "AC-02",
+        "AC-04",
+        "AC-05",
+        "AC-27",
+        "AC-29",
+        "AC-30",
+        "AC-31"
+      ],
+      "dod": "socket integration tests pass for identical not-found, unauthenticated rejection, room-wide snapshot after a move incl. a second tab, unknown-field rejection, and the offline push",
+      "files_hint": [
+        "apps/server/src/game/presentation/game.gateway.ts",
+        "apps/server/src/game/presentation/dto/",
+        "apps/server/src/game/presentation/error-mapping.ts"
+      ]
+    },
+    {
+      "id": "T15",
+      "title": "Wire resign, cancel and the draw actions end to end: use cases and gateway handlers",
+      "layer": "ports",
+      "deps": [
+        "T14"
+      ],
+      "acs": [
+        "AC-11",
+        "AC-13",
+        "AC-14",
+        "AC-14b",
+        "AC-15",
+        "AC-16",
+        "AC-20",
+        "AC-32b"
+      ],
+      "dod": "socket integration tests pass for resign, draw by agreement, the blocked re-offer with retryAfter, simultaneous offers ending once, resign refused in the abort window, and cancel aborting",
+      "files_hint": [
+        "apps/server/src/game/application/resign.ts",
+        "apps/server/src/game/application/cancel-game.ts",
+        "apps/server/src/game/application/draw.ts",
+        "apps/server/src/game/presentation/game.gateway.ts"
+      ]
+    },
+    {
+      "id": "T16",
+      "title": "Wire the rematch end to end: offer, accept into a new game, close",
+      "layer": "ports",
+      "deps": [
+        "T11",
+        "T14"
+      ],
+      "acs": [
+        "AC-22",
+        "AC-22b",
+        "AC-23",
+        "AC-24",
+        "AC-24b",
+        "AC-25",
+        "AC-25b",
+        "AC-26"
+      ],
+      "dod": "socket integration tests pass for one new swapped-colour game on agreement, double press as one offer, refusal while the offerer is offline, close, active-game refusal and no rematch after an abort",
+      "files_hint": [
+        "apps/server/src/game/application/rematch/",
+        "apps/server/src/game/presentation/game.gateway.ts"
+      ]
+    },
+    {
+      "id": "T17",
+      "title": "Bind game.module, re-arm timers on boot and add the temporary create-pairing CLI",
+      "layer": "wiring",
+      "deps": [
+        "T10",
+        "T11",
+        "T15",
+        "T16"
+      ],
+      "acs": [
+        "AC-06",
+        "AC-29b"
+      ],
+      "dod": "make arch is green, the server boots and re-arms timers, create-pairing produces a joinable game, and an overdue game ends exactly once on boot",
+      "files_hint": [
+        "apps/server/src/game/game.module.ts",
+        "apps/server/src/app.module.ts",
+        "apps/server/src/match/match.module.ts",
+        "apps/server/src/match/presentation/create-pairing.cli.ts"
+      ]
+    },
+    {
+      "id": "T18",
+      "title": "Add the useGame composable: typed socket, snapshot state, local countdown, commandId and acks",
+      "layer": "ui",
+      "deps": [
+        "T2"
+      ],
+      "acs": [
+        "AC-07",
+        "AC-27",
+        "AC-27b",
+        "AC-29"
+      ],
+      "dod": "composable tests with a fake socket pass for snapshot state, active-side countdown, no emit while disconnected, pending on ack timeout and re-join on reconnect; web typecheck is green",
+      "files_hint": [
+        "apps/web/app/composables/useGame.ts",
+        "apps/web/vitest.config.ts",
+        "apps/web/nuxt.config.ts"
+      ]
+    },
+    {
+      "id": "T19",
+      "title": "Add the /game/[id] page that maps GameSnapshot to GameView, with skeleton and presence",
+      "layer": "ui",
+      "deps": [
+        "T18"
+      ],
+      "acs": [
+        "AC-06",
+        "AC-27",
+        "AC-30",
+        "AC-31",
+        "AC-33"
+      ],
+      "dod": "snapshotToView unit tests and page component tests pass for skeleton, rating-optional players, orientation, offline marker and the abort countdown",
+      "files_hint": [
+        "apps/web/app/pages/game/[id].vue",
+        "apps/web/app/lib/snapshot-to-view.ts",
+        "apps/web/app/types/game.ts",
+        "apps/web/app/components/game/PlayerClock.vue"
+      ]
+    },
+    {
+      "id": "T20",
+      "title": "Send half-moves from the board, roll back rejected ones, add the promotion picker and the move sound",
+      "layer": "ui",
+      "deps": [
+        "T19"
+      ],
+      "acs": [
+        "AC-01",
+        "AC-02",
+        "AC-03"
+      ],
+      "dod": "component tests pass for rollback on rejection, promotion UCI, closing the picker emitting nothing, and one sound per new half-move",
+      "files_hint": [
+        "apps/web/app/components/game/GameBoard.vue",
+        "apps/web/app/components/game/PromotionPicker.vue",
+        "apps/web/public/sounds/"
+      ]
+    },
+    {
+      "id": "T21",
+      "title": "Wire GameActions: resign with confirmation, the draw offer states and Cancel in the abort window",
+      "layer": "ui",
+      "deps": [
+        "T19"
+      ],
+      "acs": [
+        "AC-11",
+        "AC-12",
+        "AC-13",
+        "AC-14",
+        "AC-14b",
+        "AC-15",
+        "AC-32b"
+      ],
+      "dod": "component tests pass for Cancel-only in the abort window, confirmed resign, dialog cancel emitting nothing, each draw state and the blocked message",
+      "files_hint": [
+        "apps/web/app/components/game/GameActions.vue",
+        "apps/web/app/components/game/GameScreen.vue"
+      ]
+    },
+    {
+      "id": "T22",
+      "title": "Add the result screen with end-reason texts, the aborted state, Rematch and New game",
+      "layer": "ui",
+      "deps": [
+        "T19"
+      ],
+      "acs": [
+        "AC-09",
+        "AC-17",
+        "AC-18",
+        "AC-19",
+        "AC-21",
+        "AC-22",
+        "AC-22b",
+        "AC-23",
+        "AC-24",
+        "AC-24b",
+        "AC-25",
+        "AC-25b",
+        "AC-26",
+        "AC-32",
+        "AC-34"
+      ],
+      "dod": "component tests pass for every end-reason text, the aborted state, each rematch state, close-before-navigate on New game and the active-game message",
+      "files_hint": [
+        "apps/web/app/components/game/GameResult.vue",
+        "apps/web/app/components/game/GameScreen.vue"
+      ]
+    },
+    {
+      "id": "T23",
+      "title": "Run end-to-end scripted games through two browser sessions against the real server and database",
+      "layer": "tests",
+      "deps": [
+        "T17",
+        "T20",
+        "T21",
+        "T22"
+      ],
+      "acs": [
+        "AC-08",
+        "AC-27",
+        "AC-28",
+        "AC-29",
+        "AC-29b",
+        "AC-31"
+      ],
+      "dod": "the e2e suite is green locally with one named scenario per listed AC, including timeout lateness of at most 1 s with both players offline",
+      "files_hint": [
+        "apps/web/e2e/",
+        "apps/server/test/e2e/"
+      ]
+    }
+  ]
+}
