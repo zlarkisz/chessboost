@@ -488,12 +488,17 @@
         "T22"
       ],
       "acs": [
+        "AC-01",
         "AC-08",
+        "AC-17",
+        "AC-22",
         "AC-27",
+        "AC-27b",
         "AC-28",
         "AC-29",
         "AC-29b",
-        "AC-31"
+        "AC-31",
+        "AC-32"
       ],
       "dod": "the e2e suite is green locally with one named scenario per listed AC, including timeout lateness of at most 1 s with both players offline",
       "files_hint": [
